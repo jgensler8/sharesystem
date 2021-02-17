@@ -6,9 +6,11 @@
     "@capacitor/core": "2.4.6",
     "@ionic/react": "^5.5.0",
     "@ionic/react-router": "^5.5.0",
+    "@solana/web3.js": "^0.90.5",
     "@testing-library/jest-dom": "^5.11.9",
     "@testing-library/react": "^11.2.5",
     "@testing-library/user-event": "^12.6.3",
+    "@tsconfig/recommended": "^1.0.1",
     "@types/jest": "^26.0.20",
     "@types/node": "^12.19.15",
     "@types/react": "^16.14.3",
@@ -16,6 +18,8 @@
     "@types/react-router": "^5.1.11",
     "@types/react-router-dom": "^5.1.7",
     "ionicons": "^5.4.0",
+    "mkdirp": "^0.5.5",
+    "mz": "^2.7.0",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "react-router": "^5.2.0",
@@ -40,7 +44,17 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "bootstrap:ts": "echo 'not working due to react typescript and ts-node imcompatible tsconfig.json' && ts-node src/lib/bootstrap.tsx",
+    "bootstrap:shell": "npm run bootstrap:shell:account && npm run bootstrap:shell:airdrop",
+    "bootstrap:shell:account": "solana-keygen new --no-passphrase --outfile ./src/lib/keygen.out",
+    "bootstrap:shell:airdrop": "solana --url localhost airdrop 10000 --config ./src/lib/keygen.out",
+    "clean:bootstrap": "rm ./src/lib/keygen.out",
+    "clean:store": "rm -rf src/lib/store/config.json",
+    "build:program-rust": "cargo build-bpf --manifest-path=./src/program-rust/Cargo.toml --bpf-out-dir=dist/program && npm run clean:store",
+    "clean:program-rust": "cargo clean --manifest-path=./src/program-rust/Cargo.toml && rm -rf ./dist && npm run clean:store",
+    "test:program-rust": "cargo test-bpf --manifest-path=./src/program-rust/Cargo.toml",
+    "deploy:program-rust": "solana --url localhost --config ./src/lib/keygen.out program deploy dist/program/solana_bpf_sharesystem.so > src/lib/deploy.out.json"
   },
   "eslintConfig": {
     "extends": [
@@ -61,7 +75,9 @@
     ]
   },
   "devDependencies": {
-    "@capacitor/cli": "2.4.6"
+    "@capacitor/cli": "2.4.6",
+    "@types/mkdirp": "^1.0.1",
+    "@types/mz": "^2.7.3"
   },
   "description": "An Ionic project"
 }
