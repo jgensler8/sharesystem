@@ -1,6 +1,6 @@
 
 [package]
-name = "solana-bpf-sharesystem"
+name = "solana-bpf-resource"
 version = "0.0.1"
 description = "Example template program written in Rust"
 authors = ["Solana Maintainers <maintainers@solana.com>"]

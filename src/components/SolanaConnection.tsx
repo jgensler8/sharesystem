@@ -1,12 +1,13 @@
 
 import {
-    Connection,
+    Account,
+    Connection, PublicKey,
 } from '@solana/web3.js';
 
 import React from 'react';
 import { sys } from 'typescript';
-import ResourceShareSystem from '../lib/ResourceShareSystem';
-import {establishConnection, loadProgramAddressFromEnvironment} from '../lib/util';
+import {SearchEngineAPI} from '../lib/lib';
+import {establishConnection, loadSearchEngineAddressFromEnvironment} from '../lib/util';
 
 type SolanaConnectionProps = {
     render(state: SolanaConnectionState): JSX.Element
@@ -15,24 +16,40 @@ type SolanaConnectionProps = {
 export type SolanaConnectionState = {
     loading: boolean,
     error?: Error,
-    system?: ResourceShareSystem
+    system?: SearchEngineAPI,
 }
 
 export class SolanaConnection extends React.Component<SolanaConnectionProps, SolanaConnectionState> {
+    _async_cancel = false;
+
     constructor(props: SolanaConnectionProps) {
         super(props);
         this.state = {
-            loading: true
+            loading: true,
         };
     }
 
     componentDidMount() {
-        loadProgramAddressFromEnvironment()
-            .then((programId: string) => {
+        loadSearchEngineAddressFromEnvironment()
+            .then((programId: PublicKey) => {
                 establishConnection()
-                    .then((connection: Connection) => this.setState({...this.state, system: new ResourceShareSystem(connection, programId), loading: false}))
+                    .then((connection: Connection) => {
+                        if(this._async_cancel){
+                            return;
+                        }
+                        this.setState({...this.state, system: new SearchEngineAPI(connection, programId, new Account()), loading: false})
+                    })
             })
-            .catch((error: any) => this.setState({ error: error, loading: false }))
+            .catch((error: any) => {
+                if(this._async_cancel){
+                    return;
+                }
+                this.setState({ error: error, loading: false })
+            })
+    }
+
+    componentWillUnmount() {
+        this._async_cancel = true;
     }
 
     render() {

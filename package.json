@@ -47,14 +47,18 @@
     "eject": "react-scripts eject",
     "bootstrap:ts": "echo 'not working due to react typescript and ts-node imcompatible tsconfig.json' && ts-node src/lib/bootstrap.tsx",
     "bootstrap:shell": "npm run bootstrap:shell:account && npm run bootstrap:shell:airdrop",
-    "bootstrap:shell:account": "solana-keygen new --no-passphrase --outfile ./src/lib/keygen.out",
-    "bootstrap:shell:airdrop": "solana --url localhost airdrop 10000 --config ./src/lib/keygen.out",
-    "clean:bootstrap": "rm ./src/lib/keygen.out",
+    "bootstrap:shell:account": "solana-keygen new --no-passphrase --outfile ./src/lib/keygen.out.json",
+    "bootstrap:shell:airdrop": "solana --url localhost airdrop 10000 --config ./src/lib/keygen.out.json",
+    "clean:bootstrap": "rm ./src/lib/keygen.out.json",
     "clean:store": "rm -rf src/lib/store/config.json",
-    "build:program-rust": "cargo build-bpf --manifest-path=./src/program-rust/Cargo.toml --bpf-out-dir=dist/program && npm run clean:store",
-    "clean:program-rust": "cargo clean --manifest-path=./src/program-rust/Cargo.toml && rm -rf ./dist && npm run clean:store",
-    "test:program-rust": "cargo test-bpf --manifest-path=./src/program-rust/Cargo.toml",
-    "deploy:program-rust": "solana --url localhost --config ./src/lib/keygen.out program deploy dist/program/solana_bpf_sharesystem.so > src/lib/deploy.out.json"
+    "build:program-rust:resource": "cargo build-bpf --manifest-path=./src/program-rust-resource/Cargo.toml --bpf-out-dir=dist/program && npm run clean:store",
+    "clean:program-rust:resource": "cargo clean --manifest-path=./src/program-rust-resource/Cargo.toml && rm -rf ./dist && npm run clean:store",
+    "test:program-rust:resource": "cargo test-bpf --manifest-path=./src/program-rust-resource/Cargo.toml",
+    "deploy:program-rust:resource": "solana --url localhost --config ./src/lib/keygen.out.json program deploy dist/program/solana_bpf_resource.so > src/lib/resource_deploy.out.json",
+    "build:program-rust:searchengine": "cargo build-bpf --manifest-path=./src/program-rust-searchengine/Cargo.toml --bpf-out-dir=dist/program && npm run clean:store",
+    "clean:program-rust:searchengine": "cargo clean --manifest-path=./src/program-rust-searchengine/Cargo.toml && rm -rf ./dist && npm run clean:store",
+    "test:program-rust:searchengine": "cargo test-bpf --manifest-path=./src/program-rust-searchengine/Cargo.toml",
+    "deploy:program-rust:searchengine": "solana --url localhost --config ./src/lib/keygen.out.json program deploy dist/program/solana_bpf_searchengine.so > src/lib/searchengine_deploy.out.json"
   },
   "eslintConfig": {
     "extends": [

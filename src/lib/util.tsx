@@ -19,7 +19,26 @@ import path from 'path';
 import fs from 'mz/fs';
 import mkdirp from 'mkdirp';
 // TODO(jeffg) would be nice to make this conditional, maybe need some JSON file with all variables
-import deployment from './deploy.out.json';
+import searchengine from './searchengine_deploy.out.json'
+import resource from './resource_deploy.out.json'
+import privateKey from './keygen.out.json'
+import { key } from 'ionicons/icons';
+
+/**
+ * Program address will have different values for local development and production
+ * Example: 2X2sFvM3G8GGzDq2whqTbxFPGyv7U4PRomL8G8LJm3Y6
+ */
+export async function loadSearchEngineAddressFromEnvironment(): Promise<PublicKey> {
+  // TODO(jeffg): support production environment
+  return new PublicKey(searchengine["ProgramId"]);
+}
+export async function loadResourceAddressFromEnvironment(): Promise<PublicKey> {
+  // TODO(jeffg): support production environment
+  return new PublicKey(resource["ProgramId"]);
+}
+export async function loadAccountFromEnvironment(): Promise<Account>{
+  return new Account(privateKey);
+}
 
 /**
  * environment-specific function to choose Solana cluster
@@ -155,14 +174,4 @@ export async function loadProgram(connection: Connection, payerAccount: Account,
       BPF_LOADER_PROGRAM_ID,
     );
     return programAccount.publicKey;
-}
-
-
-/**
- * Program address will have different values for local development and production
- * Example: 2X2sFvM3G8GGzDq2whqTbxFPGyv7U4PRomL8G8LJm3Y6
- */
-export async function loadProgramAddressFromEnvironment(): Promise<string> {
-  // TODO(jeffg): support production environment
-  return deployment.programId;
 }
