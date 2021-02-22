@@ -7,7 +7,7 @@ import {
 import React from 'react';
 import { sys } from 'typescript';
 import {SearchEngineAPI} from '../lib/lib';
-import {establishConnection, loadSearchEngineAddressFromEnvironment} from '../lib/util';
+import {establishConnection, loadSearchEngineAddressFromEnvironment, loadAccountFromEnvironment, Store} from '../lib/util';
 
 type SolanaConnectionProps = {
     render(state: SolanaConnectionState): JSX.Element
@@ -29,16 +29,21 @@ export class SolanaConnection extends React.Component<SolanaConnectionProps, Sol
         };
     }
 
+    async loadEverything(): Promise<SolanaConnectionState> {
+        let searchEngineProgramId = await loadSearchEngineAddressFromEnvironment()
+        let connection = await establishConnection()
+        let payerAccount = await loadAccountFromEnvironment()
+        let system = new SearchEngineAPI(connection, searchEngineProgramId, new Store(), payerAccount);
+        return {...this.state, system: system, loading: false}
+    }
+
     componentDidMount() {
-        loadSearchEngineAddressFromEnvironment()
-            .then((programId: PublicKey) => {
-                establishConnection()
-                    .then((connection: Connection) => {
-                        if(this._async_cancel){
-                            return;
-                        }
-                        this.setState({...this.state, system: new SearchEngineAPI(connection, programId, new Account()), loading: false})
-                    })
+        this.loadEverything()
+            .then((state: SolanaConnectionState) => {
+                if(this._async_cancel){
+                    return;
+                }
+                this.setState(state)
             })
             .catch((error: any) => {
                 if(this._async_cancel){

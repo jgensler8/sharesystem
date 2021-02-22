@@ -1,23 +1,32 @@
 import { Connection, PublicKey, Account } from '@solana/web3.js';
-import { SearchEngineAPI } from './lib'
-import {establishConnection, loadSearchEngineAddressFromEnvironment, loadAccountFromEnvironment} from './util'
+import { SearchEngineAPI} from './lib'
+import { establishConnection, loadSearchEngineAddressFromEnvironment, loadAccountFromEnvironment, Store, KeyNotFoundError} from './util'
 
 describe('serach engine', () => {
-    let address: PublicKey;
-    let account: Account;
-    let conn: Connection;
-    let system: SearchEngineAPI;
+  let conn: Connection;
+  let address: PublicKey;
+  let store: Store;
+  let account: Account;
+  let system: SearchEngineAPI;
 
-    beforeAll(async () => {
-      address = await loadSearchEngineAddressFromEnvironment();
-      account = await loadAccountFromEnvironment();
-      console.log(account);
-      conn = await establishConnection();
-      system = new SearchEngineAPI(conn, address, account);
-    })
+  beforeAll(async () => {
+    conn = await establishConnection();
+    address = await loadSearchEngineAddressFromEnvironment();
+    store = new Store();
+    account = await loadAccountFromEnvironment();
+    system = new SearchEngineAPI(conn, address, store, account);
+  })
 
-    test('can list resources', async () => {
-        expect(await system.listResources()).toEqual([])
-    });
+  test('can create and read search engine account', async () => {
+    await expect(system.getDefaultSearchEngineAccount()).rejects.toEqual(new KeyNotFoundError());
+
+    let createdAccount = await system.createDefaultSearchEngineAccount("name");
+    let storedAccount = await system.getDefaultSearchEngineAccount();
+    expect(storedAccount).toStrictEqual(storedAccount);
+  });
+
+  test('can list resources', async () => {
+    expect(await system.listResources()).toHaveLength(2);
+  });
 })
 
