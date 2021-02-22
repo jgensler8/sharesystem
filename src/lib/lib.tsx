@@ -286,6 +286,8 @@ export class SearchEngineAPI implements ISearchEngine {
   payerAccount: Account;
   store: Store;
   readonly ACCOUNT_KEY = "searchengine_this_account"
+  readonly SEARCH_ENGINE_ACCOUNT_SPACE = 10;
+  readonly SEARCH_ENGINE_ACCOUNT_LAMPORTS = 100;
 
   constructor(connection: Connection, programId: PublicKey, store: Store, payerAccount: Account) {
     this.connection = connection;
@@ -295,28 +297,28 @@ export class SearchEngineAPI implements ISearchEngine {
   }
 
   async createDefaultSearchEngineAccount(friendlyName: string): Promise<SearchEngineAccount> {
-    let account = new SearchEngineAccount(new Account(), friendlyName, new TrustTable([]));
+    let searchEngineAccount = new SearchEngineAccount(new Account(), friendlyName, new TrustTable([]));
     // store on chain
-    // const transaction = new Transaction().add(
-    //   SystemProgram.createAccount({
-    //     fromPubkey: payerAccount.publicKey,
-    //     newAccountPubkey: greetedPubkey,
-    //     lamports,
-    //     space,
-    //     programId, <------------- this is the search engine program id
-    //   }),
-    // );
-    // await sendAndConfirmTransaction(
-    //   connection,
-    //   transaction,
-    //   [payerAccount, greetedAccount],
-    //   {
-    //     commitment: 'singleGossip',
-    //     preflightCommitment: 'singleGossip',
-    //   },
-    // );
-    this.store.put(this.ACCOUNT_KEY, account)
-    return account;
+    const transaction = new Transaction().add(
+      SystemProgram.createAccount({
+        fromPubkey: this.payerAccount.publicKey,
+        newAccountPubkey: searchEngineAccount.account.publicKey,
+        lamports: this.SEARCH_ENGINE_ACCOUNT_LAMPORTS,
+        space: this.SEARCH_ENGINE_ACCOUNT_SPACE,
+        programId: this.programId,
+      }),
+    );
+    await sendAndConfirmTransaction(
+      this.connection,
+      transaction,
+      [this.payerAccount, searchEngineAccount.account],
+      {
+        commitment: 'singleGossip',
+        preflightCommitment: 'singleGossip',
+      },
+    );
+    this.store.put(this.ACCOUNT_KEY, searchEngineAccount)
+    return searchEngineAccount;
   }
 
   async _getSearchEngineAccount(key: string): Promise<SearchEngineAccount> {

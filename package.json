@@ -50,7 +50,7 @@
     "bootstrap:ts": "echo 'not working due to react typescript and ts-node imcompatible tsconfig.json' && ts-node src/lib/bootstrap.tsx",
     "bootstrap:shell": "npm run bootstrap:shell:account && npm run bootstrap:shell:airdrop",
     "bootstrap:shell:account": "solana-keygen new --no-passphrase --outfile ./src/lib/keygen.out.json",
-    "bootstrap:shell:airdrop": "solana --url localhost airdrop 10000 --config ./src/lib/keygen.out.json",
+    "bootstrap:shell:airdrop": "solana --url localhost airdrop 10000 ./src/lib/keygen.out.json",
     "clean:bootstrap": "rm ./src/lib/keygen.out.json",
     "clean:store": "rm -rf src/lib/store/config.json",
     "build:program-rust:resource": "cargo build-bpf --manifest-path=./src/program-rust-resource/Cargo.toml --bpf-out-dir=dist/program && npm run clean:store",

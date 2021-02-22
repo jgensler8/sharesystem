@@ -6,15 +6,18 @@ describe('serach engine', () => {
   let conn: Connection;
   let address: PublicKey;
   let store: Store;
-  let account: Account;
+  let payerAccount: Account;
   let system: SearchEngineAPI;
 
   beforeAll(async () => {
     conn = await establishConnection();
     address = await loadSearchEngineAddressFromEnvironment();
     store = new Store();
-    account = await loadAccountFromEnvironment();
-    system = new SearchEngineAPI(conn, address, store, account);
+    payerAccount = await loadAccountFromEnvironment();
+    system = new SearchEngineAPI(conn, address, store, payerAccount);
+
+    console.log(`payer account: ${payerAccount.publicKey.toBase58()}`)
+    console.log(`search engine: ${address}`)
   })
 
   test('can create and read search engine account', async () => {
@@ -22,10 +25,6 @@ describe('serach engine', () => {
 
     let createdAccount = await system.createDefaultSearchEngineAccount("name");
     let storedAccount = await system.getDefaultSearchEngineAccount();
-    expect(storedAccount).toStrictEqual(storedAccount);
-  });
-
-  test('can list resources', async () => {
-    expect(await system.listResources()).toHaveLength(2);
+    expect(createdAccount).toStrictEqual(storedAccount);
   });
 })
