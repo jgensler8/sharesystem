@@ -1,4 +1,4 @@
-# ShareSytem
+# ShareSystem
 
 ShareSystem is a Solana-backed "best-effort" resource management system.
 

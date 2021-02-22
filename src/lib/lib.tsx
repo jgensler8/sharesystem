@@ -11,7 +11,7 @@ import {
   sendAndConfirmTransaction,
 } from '@solana/web3.js';
 import { randomInt } from 'mz/crypto';
-import {Store, WrongInstanceError, KeyNotFoundError} from './util';
+import { Store, WrongInstanceError, KeyNotFoundError } from './util';
 
 /*
 Memory Structures
@@ -116,7 +116,7 @@ export class Challenege {
 
 export class ChallengeTable {
   entries: Array<Challenege>
-  
+
   constructor(entries: Array<Challenege>) {
     this.entries = entries;
   }
@@ -126,16 +126,54 @@ export class Resource {
   name: string;
   zip: string;
   programId: PublicKey;
+  trustThreshold: number;
 
-  constructor(name: string, zip: string, programId: PublicKey) {
+  constructor(name: string, zip: string, programId: PublicKey, trustThreshold: number) {
     this.name = name;
     this.zip = zip;
     this.programId = programId;
+    this.trustThreshold = trustThreshold;
   }
+}
 
+export interface IResourceAPI {
   /*
   Upload of a robot/human that X amount of resource exists, shold prove to other accounts that the resource is available
   */
+  recordResourceInstance(instance: ResourceInstance): Promise<void>;
+
+  /*
+  Timelocks the resources and (ideally) notifies individuals that they can challenge for their claims
+  Can only be done by resource maintainer
+  Should verify that trust exists between all accounts with intent, remove non-trustworthy accounts, calcuate distribution
+  */
+  initiateDistribution(): Promise<void>;
+
+  /*
+  list challenges that either:
+      * require input
+      * request other's input
+  */
+  listChallenges(): Promise<ChallengeTable>;
+
+  /*
+  approve a challenge to increase challenge trust level and (hopefully/eventually) enable the resource to be claimed
+  */
+  approveChallenge(challenege: Challenege): Promise<void>;
+
+  /*
+  claim the rewards from a challenge
+  */
+  claimChallenge(from: PublicKey): Promise<void>;
+}
+
+export class ResourceAPI implements IResourceAPI {
+  resource: Resource;
+
+  constructor(resource: Resource) {
+    this.resource = resource;
+  }
+
   async recordResourceInstance(instance: ResourceInstance): Promise<void> {
     // let mut is_being_distributed: boolean = some_borsh_call::read_bool(&data)
     // if is_being_distributed
@@ -146,16 +184,6 @@ export class Resource {
     // could maybe do a mint/burn for incentive structue to record resource
   }
 
-  // ************************************************************************
-  // Challenge
-  // ************************************************************************
-
-  /*
-  Timelocks the resources and (ideally) notifies individuals that they can challenge for their claims
-  Can only be done by resource maintainer
-  Should verify that trust exists between all accounts with intent, remove non-trustworthy accounts, calcuate distribution
-  algorithm: self -> owned_resources -> resource -> resource.data
-  */
   async initiateDistribution(): Promise<void> {
     // should create challenges matrix for everyone
 
@@ -173,12 +201,6 @@ export class Resource {
     // let mut resources_per_intent: uint = expected_resources / len(contract.intent_array)
   }
 
-  /*
-  list challenges that either:
-      * require input
-      * request other's input
-  algorithm: self -> intents -> resources -> resource.data
-  */
   async listChallenges(): Promise<ChallengeTable> {
     // let mut is_being_distributed: boolean = some_borsh_call::read_bool(&data)
     // if is_being_distributed == false
@@ -192,10 +214,6 @@ export class Resource {
     ])
   }
 
-  /*
-  approve a challenge to increase challenge trust level and (hopefully/eventually) enable the resource to be claimed
-  algorithm: self -> intents -> resources -> resource.data
-  */
   async approveChallenge(challenege: Challenege): Promise<void> {
     // let mut challenges: []Challenge = some_borsh_call::read_array(&data)
     // for challenge in challenges:
@@ -205,10 +223,6 @@ export class Resource {
   async denyChallenge(challenege: Challenege): Promise<void> {
   }
 
-  /*
-  claim the rewards from a challenge:
-  algorithm: self -> intents -> resource -> resource.data
-  */
   async claimChallenge() {
     // let mut challenges: []Challenge = some_borsh_call::read_array(&data)
     // trust_score = 0
@@ -224,7 +238,49 @@ export class Resource {
   }
 }
 
-export class SearchEngineAPI {
+export interface ISearchEngine {
+
+  // ************************************************************************
+  // Account
+  // ************************************************************************
+
+  createDefaultSearchEngineAccount(friendlyName: string): Promise<SearchEngineAccount>;
+
+  getDefaultSearchEngineAccount(): Promise<SearchEngineAccount>;
+
+  updateSearchEngineAccount(account: SearchEngineAccount): Promise<void>;
+
+  getAccountDetails(address: PublicKey): Promise<SearchEngineAccount>;
+
+  // ************************************************************************
+  // Resource
+  // ************************************************************************
+
+  /*
+  Create resource to share with others. Should have a way for ResourceInstance to be recorded or verified (like posting photo to chain for someone to validate later)
+  Will also need to describe how much memory (based on the number of people * wallet id size * claim pointer size)
+  */
+  registerResource(resource: Resource): Promise<void>;
+
+  /*
+  Find resources able to the claimed. Likely can use zipcode/lat+long plus radius
+  */
+  listResources(): Promise<Resource[]>;
+
+
+  // ************************************************************************
+  // Intent
+  // ************************************************************************
+
+  /*
+  Signal to resource maintainer that you wish to claim resource by a specific time
+  */
+  recordIntent(account: SearchEngineAccount, resource: PublicKey): Promise<void>;
+
+  listIntents(account: SearchEngineAccount): Promise<Array<PublicKey>>;
+}
+
+export class SearchEngineAPI implements ISearchEngine {
   connection: Connection;
   programId: PublicKey;
   payerAccount: Account;
@@ -237,10 +293,6 @@ export class SearchEngineAPI {
     this.store = store;
     this.payerAccount = payerAccount;
   }
-
-  // ************************************************************************
-  // Account
-  // ************************************************************************
 
   async createDefaultSearchEngineAccount(friendlyName: string): Promise<SearchEngineAccount> {
     let account = new SearchEngineAccount(new Account(), friendlyName, new TrustTable([]));
@@ -291,8 +343,8 @@ export class SearchEngineAPI {
     // check cache
     try {
       return this._getSearchEngineAccount(address.toBase58());
-    } catch(error){
-      if(error instanceof KeyNotFoundError) {
+    } catch (error) {
+      if (error instanceof KeyNotFoundError) {
         // read from chain
         let searchEngineAccount = new SearchEngineAccount(new Account(), "test_" + randomInt(10000), new TrustTable([]));
         // store in cache
@@ -303,47 +355,30 @@ export class SearchEngineAPI {
     }
   }
 
-  // ************************************************************************
-  // Resource
-  // ************************************************************************
-
-  /*
-  Create resource to share with others. Should have a way for ResourceInstance to be recorded or verified (like posting photo to chain for someone to validate later)
-  Will also need to describe how much memory (based on the number of people * wallet id size * claim pointer size)
-  */
   async registerResource(resource: Resource): Promise<void> {
     // the resource is a contract owned by the person above? I think contracts also have data regions
     // deploys a new contract and creates the database account for the contract
     // register resource contract with search engine (factory)
   }
 
-  /*
-  Find resources able to the claimed. Likely can use zipcode/lat+long plus radius
-  */
   async listResources(): Promise<Resource[]> {
     return [
       new Resource(
         "palo alto potatoes",
         "9420",
         new PublicKey("4RmyNU1MCKkqLa6sHs8CC75gXrXaBw6mH9Z3ApkEkJvn"),
+        1.5,
       ),
       new Resource(
         "mountain view tomatoes",
         "94040",
         new PublicKey("2X2sFvM3G8GGzDq2whqTbxFPGyv7U4PRomL8G8LJm3Y6"),
-      )
+        0.9,
+      ),
     ];
   }
 
-
-  // ************************************************************************
-  // Intent
-  // ************************************************************************
-
-  /*
-  Signal to resource maintainer that you wish to claim resource by a specific time
-  */
-  async recordIntent(resource: Resource): Promise<void> {
+  async recordIntent(account: SearchEngineAccount, resource: PublicKey): Promise<void> {
     // instead, the "intent" might just be submitting a trust table
 
     // Example: instead of incrementing a counter, we need to append the some account ID (passed as some parameter) to a list stored in data
@@ -355,15 +390,96 @@ export class SearchEngineAPI {
     // let mut account_list: []AccountInfo = some_borsh_call::read_array(&data)
     // account_list.append(account_intent)
   }
+
+  async listIntents(account: SearchEngineAccount): Promise<Array<PublicKey>> {
+    return [];
+  }
 }
 
-export class ResourceAPI {
+export class MockSearchEngineAPI implements ISearchEngine {
+  store: Store;
+  readonly ACCOUNT_KEY = "mocksearchengine_this_account"
+  readonly RESOURCES_KEY = "mocksearchengine_resources"
+  readonly INTENTS_KEY = "mocksearchengine_intents"
 
-  connection: Connection;
-  programId: string;
+  constructor(store: Store) {
+    this.store = store;
+  }
 
-  constructor(connection: Connection, programId: string) {
-    this.connection = connection;
-    this.programId = programId;
+  async createDefaultSearchEngineAccount(friendlyName: string): Promise<SearchEngineAccount> {
+    let account = new SearchEngineAccount(new Account(), friendlyName, new TrustTable([]));
+    this.store.put(this.ACCOUNT_KEY, account)
+    return account;
+  }
+
+  async _getSearchEngineAccount(key: string): Promise<SearchEngineAccount> {
+    let account = await this.store.get(key);
+    if (!account) {
+      throw new KeyNotFoundError();
+    }
+    if (!(account instanceof SearchEngineAccount)) {
+      throw new WrongInstanceError();
+    }
+    return account;
+  }
+
+  async getDefaultSearchEngineAccount(): Promise<SearchEngineAccount> {
+    return this._getSearchEngineAccount(this.ACCOUNT_KEY);
+  }
+
+  async updateSearchEngineAccount(account: SearchEngineAccount): Promise<void> {
+    this.store.put(this.ACCOUNT_KEY, account)
+  }
+
+  async getAccountDetails(address: PublicKey): Promise<SearchEngineAccount> {
+    // check cache
+    try {
+      return this._getSearchEngineAccount(address.toBase58());
+    } catch (error) {
+      if (error instanceof KeyNotFoundError) {
+        // read from chain
+        let searchEngineAccount = new SearchEngineAccount(new Account(), "test_" + randomInt(10000), new TrustTable([]));
+        // store in cache
+        this.store.put(searchEngineAccount.account.publicKey.toBase58(), searchEngineAccount)
+        return searchEngineAccount;
+      }
+      throw error;
+    }
+  }
+
+  async registerResource(resource: Resource): Promise<void> {
+    let resourceList = await this.listResources();
+    resourceList.push(resource);
+    this.store.put(this.RESOURCES_KEY, resourceList);
+  }
+
+  async listResources(): Promise<Resource[]> {
+    let resourceList = await this.store.get(this.RESOURCES_KEY)
+    if (!resourceList) {
+      this.store.put(this.RESOURCES_KEY, []);
+      return [];
+    }
+    if (!(resourceList instanceof Array)) {
+      throw new WrongInstanceError();
+    }
+    return resourceList;
+  }
+
+  async recordIntent(account: SearchEngineAccount, resource: PublicKey): Promise<void> {
+    let intentsList = await this.listIntents(account);
+    intentsList.push(resource);
+    this.store.put(this.INTENTS_KEY, intentsList);
+  }
+
+  async listIntents(account: SearchEngineAccount): Promise<Array<PublicKey>> {
+    let intentsList = await this.store.get(this.INTENTS_KEY)
+    if (!intentsList) {
+      this.store.put(this.INTENTS_KEY, []);
+      return [];
+    }
+    if (!(intentsList instanceof Array)) {
+      throw new WrongInstanceError();
+    }
+    return intentsList;
   }
 }
