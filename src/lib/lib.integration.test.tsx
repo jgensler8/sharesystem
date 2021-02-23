@@ -1,5 +1,5 @@
 import { Connection, PublicKey, Account } from '@solana/web3.js';
-import { SearchEngineAPI } from './lib'
+import { SearchEngineAPI, TrustTable, TrustTableEntry } from './lib'
 import { establishConnection, loadSearchEngineAddressFromEnvironment, loadAccountFromEnvironment, Store, KeyNotFoundError } from './util'
 
 describe('serach engine', () => {
@@ -27,4 +27,14 @@ describe('serach engine', () => {
     let storedAccount = await system.getDefaultSearchEngineAccount();
     expect(createdAccount).toStrictEqual(storedAccount);
   });
+
+  test('can read trust table', async () => {
+    // assumes account created already
+    let defaultAccount = await system.getDefaultSearchEngineAccount();
+    defaultAccount.trustTable = new TrustTable([new TrustTableEntry(new PublicKey("4RmyNU1MCKkqLa6sHs8CC75gXrXaBw6mH9Z3ApkEkJvn"), 0.1)])
+    system.updateSearchEngineAccount(defaultAccount);
+
+    let storedAccount = await system.getAccountDetails(defaultAccount.account.publicKey);
+    expect(defaultAccount).toStrictEqual(storedAccount);
+  })
 })

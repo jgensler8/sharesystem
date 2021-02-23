@@ -1,9 +1,8 @@
-// use num_derive::FromPrimitive;
 use num_derive::FromPrimitive;
-use thiserror::Error;
 use solana_program::{decode_error::DecodeError, program_error::ProgramError};
+use thiserror::Error;
 
-/// Errors that may be returned by the Search Engine program.
+/// Errors that may be returned by the Search Engine program.}
 #[derive(Clone, Debug, Eq, Error, FromPrimitive, PartialEq)]
 pub enum SearchEngineError {
     /// Invalid instruction number passed in.

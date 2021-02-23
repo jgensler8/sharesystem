@@ -10,6 +10,7 @@ import {
   Transaction,
   sendAndConfirmTransaction,
 } from '@solana/web3.js';
+import { enter } from 'ionicons/icons';
 import { randomInt } from 'mz/crypto';
 import { Store, WrongInstanceError, KeyNotFoundError } from './util';
 
@@ -63,12 +64,10 @@ Resources
 */
 
 export class TrustTableEntry {
-  name: string;
-  id: string;
+  id: PublicKey;
   value: number;
 
-  constructor(name: string, id: string, value: number) {
-    this.name = name;
+  constructor(id: PublicKey, value: number) {
     this.id = id;
     this.value = value;
   }
@@ -344,14 +343,31 @@ export class SearchEngineAPI implements ISearchEngine {
   async getAccountDetails(address: PublicKey): Promise<SearchEngineAccount> {
     // check cache
     try {
-      return this._getSearchEngineAccount(address.toBase58());
+      return await this._getSearchEngineAccount(address.toBase58());
     } catch (error) {
       if (error instanceof KeyNotFoundError) {
         // read from chain
-        let searchEngineAccount = new SearchEngineAccount(new Account(), "test_" + randomInt(10000), new TrustTable([]));
+        const transaction = new Transaction().add(
+          new TransactionInstruction({
+            keys: [
+              {pubkey: address, isSigner: false, isWritable: false},
+            ],
+            programId: this.programId,
+            data: Buffer.alloc(1),
+          })
+        );
+        let searchEngineAccount = await sendAndConfirmTransaction(
+          this.connection,
+          transaction,
+          [this.payerAccount],
+          {
+            commitment: 'singleGossip',
+            preflightCommitment: 'singleGossip',
+          },
+        );
         // store in cache
-        this.store.put(searchEngineAccount.account.publicKey.toBase58(), searchEngineAccount)
-        return searchEngineAccount;
+        // this.store.put(searchEngineAccount.account.publicKey.toBase58(), searchEngineAccount)
+        return new SearchEngineAccount(new Account(), "test", new TrustTable([]));
       }
       throw error;
     }

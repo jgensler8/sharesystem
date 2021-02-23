@@ -30,11 +30,11 @@ import { key } from 'ionicons/icons';
  */
 export async function loadSearchEngineAddressFromEnvironment(): Promise<PublicKey> {
   // TODO(jeffg): support production environment
-  return new PublicKey(searchengine["ProgramId"]);
+  return new PublicKey(searchengine["ProgramId"] || searchengine["programId"]);
 }
 export async function loadResourceAddressFromEnvironment(): Promise<PublicKey> {
   // TODO(jeffg): support production environment
-  return new PublicKey(resource["ProgramId"]);
+  return new PublicKey(resource["ProgramId"] || resource["programId"]);
 }
 export async function loadAccountFromEnvironment(): Promise<Account> {
   return new Account(Uint8Array.from(privateKey));

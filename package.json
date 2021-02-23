@@ -60,6 +60,7 @@
     "build:program-rust:searchengine": "cargo build-bpf --manifest-path=./src/program-rust-searchengine/Cargo.toml --bpf-out-dir=dist/program && npm run clean:store",
     "clean:program-rust:searchengine": "cargo clean --manifest-path=./src/program-rust-searchengine/Cargo.toml && rm -rf ./dist && npm run clean:store",
     "test:program-rust:searchengine": "cargo test-bpf --manifest-path=./src/program-rust-searchengine/Cargo.toml",
+    "watch:program-rust:searchengine": "cd src/program-rust-searchengine && RUST_BACKTRACE=1 cargo watch --clear --exec test",
     "deploy:program-rust:searchengine": "solana --url localhost --config ./src/lib/keygen.out.json program deploy dist/program/solana_bpf_searchengine.so > src/lib/searchengine_deploy.out.json"
   },
   "eslintConfig": {
