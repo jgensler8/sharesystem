@@ -1,6 +1,9 @@
 use crate::constants::TRUST_TABLE_SIZE;
 use crate::error::SearchEngineError::InvalidInstruction;
-use solana_program::program_error::ProgramError;
+use solana_program::{
+    program_error::ProgramError,
+    pubkey::Pubkey,
+};
 use std::mem::size_of;
 
 /*
@@ -23,8 +26,24 @@ operations
 */
 
 #[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct TrustTableEntry {
+    pub to: Pubkey,
+    pub value: f32,
+}
+
+#[repr(C)]
 #[derive(Clone, Debug, PartialEq)]
-pub struct Empty {}
+pub struct TrustTable {
+    pub entries: Vec<TrustTableEntry>,
+}
+
+#[repr(C)]
+#[derive(Clone, Debug, PartialEq)]
+pub struct SearchEngineAccount {
+    pub friendly_name: String,
+    pub trust_table: TrustTable,
+}
 
 #[repr(C)]
 #[derive(Clone, Debug, PartialEq)]
@@ -34,38 +53,66 @@ pub struct Location {
 
 #[repr(C)]
 #[derive(Clone, Debug, PartialEq)]
-pub struct TrustTableEntry {
-    pub to: String,
-    pub value: f32,
-}
-
-#[repr(C)]
-#[derive(Clone, Debug, PartialEq)]
-pub struct TrustTable {
-    pub entries: [TrustTableEntry; TRUST_TABLE_SIZE],
+pub struct Resource {
+    pub address: Pubkey,
+    pub name: String,
+    pub location: Location,
+    pub trust_threshold: f32,
 }
 
 #[repr(C)]
 #[derive(Debug, PartialEq)]
 pub enum SearchEngineInstruction {
-    RegisterResource(Empty),
-    ListResource(Location),
-    UpdateTrustTable(TrustTable),
-    GetTrustTable(Empty),
-    RegisterIntent(Empty),
-    ListIntent(Empty),
+    UpdateAccount(SearchEngineAccount),
+    RegisterResource(Resource),
+    RegisterIntent(Resource),
 }
 
 impl SearchEngineInstruction {
     pub fn unpack(input: &[u8]) -> Result<Self, ProgramError> {
         let (&tag, _rest) = input.split_first().ok_or(InvalidInstruction)?;
         Ok(match tag {
-            0 => Self::RegisterResource(Empty {}),
+            0 => {
+                let friendly_name = String::from("jeff");
+                let entries = [TrustTableEntry{
+                    to: Pubkey::new_unique(),
+                    value: 0.0,
+                }; TRUST_TABLE_SIZE];
+                let trust_table = TrustTable{
+                    entries: entries.to_vec(),
+                };
+                Self::UpdateAccount(SearchEngineAccount {
+                    friendly_name,
+                    trust_table,
+                })
+            },
             1 => {
                 // let (zip, _) = Self::unpack_string(rest)?;
-                let zip = "test";
-                Self::ListResource(Location {
-                    zip: zip.to_string(),
+                let address = Pubkey::new_unique();
+                let location = Location{
+                    zip: String::from("12345")
+                };
+                let name = String::from("test");
+                let trust_threshold = f32::from(0.0);
+                Self::RegisterResource(Resource{
+                    address,
+                    location,
+                    name,
+                    trust_threshold,
+                })
+            }
+            2 => {
+                let address = Pubkey::new_unique();
+                let location = Location{
+                    zip: String::from("12345")
+                };
+                let name = String::from("test");
+                let trust_threshold = f32::from(0.0);
+                Self::RegisterIntent(Resource{
+                    address,
+                    location,
+                    name,
+                    trust_threshold,
                 })
             }
             _ => return Err(InvalidInstruction.into()),
@@ -96,23 +143,57 @@ mod test {
     }
 
     #[test]
-    fn test_register_resource() {
+    fn test_update_account() {
         let mut data = Vec::new();
         data.push(0);
 
         let result = SearchEngineInstruction::unpack(&data).unwrap();
-        let expected = SearchEngineInstruction::RegisterResource(Empty {});
+        
+        let entries = [TrustTableEntry{
+            to: Pubkey::new_unique(),
+            value: 0.0,
+        }; TRUST_TABLE_SIZE];
+        let expected = SearchEngineInstruction::UpdateAccount(SearchEngineAccount {
+            friendly_name: String::from("jeff"),
+            trust_table: TrustTable{
+                entries: entries.to_vec(),
+            }
+        });
         assert_eq!(expected, result);
+
     }
 
     #[test]
-    fn test_list_resource() {
+    fn test_register_resource() {
         let mut data = Vec::new();
         data.push(1);
 
         let result = SearchEngineInstruction::unpack(&data).unwrap();
-        let expected = SearchEngineInstruction::ListResource(Location {
-            zip: String::from("test"),
+        let expected = SearchEngineInstruction::RegisterResource(Resource {
+            address: Pubkey::new_unique(),
+            location: Location{
+                zip: String::from("12345")
+            },
+            name: String::from("test"),
+            trust_threshold: 0.0,
+        });
+        assert_eq!(expected, result);
+    }
+
+
+    #[test]
+    fn test_register_intent() {
+        let mut data = Vec::new();
+        data.push(2);
+
+        let result = SearchEngineInstruction::unpack(&data).unwrap();
+        let expected = SearchEngineInstruction::RegisterIntent(Resource {
+            address: Pubkey::new_unique(),
+            location: Location{
+                zip: String::from("12345")
+            },
+            name: String::from("test"),
+            trust_threshold: 0.0,
         });
         assert_eq!(expected, result);
     }

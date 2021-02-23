@@ -121,15 +121,23 @@ export class ChallengeTable {
   }
 }
 
+export class Location {
+  zip: string;
+
+  constructor(zip: string) {
+    this.zip = zip;
+  }
+}
+
 export class Resource {
   name: string;
-  zip: string;
+  location: Location;
   programId: PublicKey;
   trustThreshold: number;
 
-  constructor(name: string, zip: string, programId: PublicKey, trustThreshold: number) {
+  constructor(name: string, location: Location, programId: PublicKey, trustThreshold: number) {
     this.name = name;
-    this.zip = zip;
+    this.location = location;
     this.programId = programId;
     this.trustThreshold = trustThreshold;
   }
@@ -264,7 +272,7 @@ export interface ISearchEngine {
   /*
   Find resources able to the claimed. Likely can use zipcode/lat+long plus radius
   */
-  listResources(): Promise<Resource[]>;
+  listResources(location: Location): Promise<Resource[]>;
 
 
   // ************************************************************************
@@ -346,6 +354,8 @@ export class SearchEngineAPI implements ISearchEngine {
       return await this._getSearchEngineAccount(address.toBase58());
     } catch (error) {
       if (error instanceof KeyNotFoundError) {
+        // TODO: change to get_account_info
+
         // read from chain
         const transaction = new Transaction().add(
           new TransactionInstruction({
@@ -379,7 +389,7 @@ export class SearchEngineAPI implements ISearchEngine {
     // register resource contract with search engine (factory)
   }
 
-  async listResources(): Promise<Resource[]> {
+  async listResources(location: Location): Promise<Resource[]> {
     return [
       new Resource(
         "palo alto potatoes",
@@ -471,7 +481,7 @@ export class MockSearchEngineAPI implements ISearchEngine {
     this.store.put(this.RESOURCES_KEY, resourceList);
   }
 
-  async listResources(): Promise<Resource[]> {
+  async listResources(location: Location): Promise<Resource[]> {
     let resourceList = await this.store.get(this.RESOURCES_KEY)
     if (!resourceList) {
       this.store.put(this.RESOURCES_KEY, []);

@@ -2,7 +2,7 @@ pub mod constants;
 pub mod error;
 pub mod instruction;
 
-use crate::instruction::{Empty, Location, SearchEngineInstruction};
+use crate::instruction::{SearchEngineAccount, Resource, SearchEngineInstruction};
 use solana_program::{
     account_info::AccountInfo, entrypoint, entrypoint::ProgramResult, info, pubkey::Pubkey,
 };
@@ -14,15 +14,27 @@ fn _process_instruction(
 ) -> ProgramResult {
     let instruction = SearchEngineInstruction::unpack(instruction_data)?;
     match instruction {
-        SearchEngineInstruction::RegisterResource(Empty {}) => {
-            info!("would register resource");
+        SearchEngineInstruction::UpdateAccount(SearchEngineAccount{
+            friendly_name: _,
+            trust_table: _,
+        }) => {
+            info!("would update account");
         }
-        SearchEngineInstruction::ListResource(Location { zip }) => {
+        SearchEngineInstruction::RegisterResource(Resource {
+            address: _,
+            name: _ ,
+            location: _,
+            trust_threshold: _,
+        }) => {
             info!("would list resource");
-            info!(&zip);
         }
-        _ => {
-            info!("some other command");
+        SearchEngineInstruction::RegisterIntent(Resource {
+            address: _,
+            name: _,
+            location: _,
+            trust_threshold: _,
+        }) => {
+            info!("would register intent");
         }
     }
     Ok(())
