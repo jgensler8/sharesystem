@@ -1,9 +1,7 @@
-use crate::constants::TRUST_TABLE_SIZE;
+use crate::constants::MAX_TRUST_TABLE_SIZE;
 use crate::error::SearchEngineError::InvalidInstruction;
-use solana_program::{
-    program_error::ProgramError,
-    pubkey::Pubkey,
-};
+use borsh::{BorshDeserialize, BorshSerialize};
+use solana_program::{program_error::ProgramError};
 use std::mem::size_of;
 
 /*
@@ -26,35 +24,35 @@ operations
 */
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(BorshSerialize, BorshDeserialize, Clone, Copy, PartialEq, Debug, Default)]
 pub struct TrustTableEntry {
-    pub to: Pubkey,
+    pub to: [u8; 32],
     pub value: f32,
 }
 
 #[repr(C)]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq)]
 pub struct TrustTable {
-    pub entries: Vec<TrustTableEntry>,
+    pub entries: [TrustTableEntry; MAX_TRUST_TABLE_SIZE],
 }
 
 #[repr(C)]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq)]
 pub struct SearchEngineAccount {
     pub friendly_name: String,
     pub trust_table: TrustTable,
 }
 
 #[repr(C)]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq)]
 pub struct Location {
     pub zip: String,
 }
 
 #[repr(C)]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq)]
 pub struct Resource {
-    pub address: Pubkey,
+    pub address: [u8; 32],
     pub name: String,
     pub location: Location,
     pub trust_threshold: f32,
@@ -73,47 +71,28 @@ impl SearchEngineInstruction {
         let (&tag, _rest) = input.split_first().ok_or(InvalidInstruction)?;
         Ok(match tag {
             0 => {
-                let friendly_name = String::from("jeff");
-                let entries = [TrustTableEntry{
-                    to: Pubkey::new_unique(),
-                    value: 0.0,
-                }; TRUST_TABLE_SIZE];
-                let trust_table = TrustTable{
-                    entries: entries.to_vec(),
-                };
-                Self::UpdateAccount(SearchEngineAccount {
-                    friendly_name,
-                    trust_table,
-                })
-            },
+                match SearchEngineAccount::try_from_slice(_rest) {
+                    Ok(account) => Self::UpdateAccount(account),
+                    Err(_err) => {
+                        return Err(ProgramError::InvalidInstructionData)
+                    }
+                }
+            }
             1 => {
-                // let (zip, _) = Self::unpack_string(rest)?;
-                let address = Pubkey::new_unique();
-                let location = Location{
-                    zip: String::from("12345")
-                };
-                let name = String::from("test");
-                let trust_threshold = f32::from(0.0);
-                Self::RegisterResource(Resource{
-                    address,
-                    location,
-                    name,
-                    trust_threshold,
-                })
+                match Resource::try_from_slice(_rest) {
+                    Ok(resource) => Self::RegisterResource(resource),
+                    Err(_err) => {
+                        return Err(ProgramError::InvalidInstructionData)
+                    }
+                }
             }
             2 => {
-                let address = Pubkey::new_unique();
-                let location = Location{
-                    zip: String::from("12345")
-                };
-                let name = String::from("test");
-                let trust_threshold = f32::from(0.0);
-                Self::RegisterIntent(Resource{
-                    address,
-                    location,
-                    name,
-                    trust_threshold,
-                })
+                match Resource::try_from_slice(_rest) {
+                    Ok(resource) => Self::RegisterIntent(resource),
+                    Err(_err) => {
+                        return Err(ProgramError::InvalidInstructionData)
+                    }
+                }
             }
             _ => return Err(InvalidInstruction.into()),
         })
@@ -132,6 +111,8 @@ pub fn unpack<T>(input: &[u8]) -> Result<&T, ProgramError> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use solana_program::pubkey::Pubkey;
+    use borsh::BorshSerialize;
 
     #[test]
     fn test_empty_input() {
@@ -143,58 +124,87 @@ mod test {
     }
 
     #[test]
-    fn test_update_account() {
-        let mut data = Vec::new();
-        data.push(0);
-
-        let result = SearchEngineInstruction::unpack(&data).unwrap();
-        
-        let entries = [TrustTableEntry{
-            to: Pubkey::new_unique(),
-            value: 0.0,
-        }; TRUST_TABLE_SIZE];
-        let expected = SearchEngineInstruction::UpdateAccount(SearchEngineAccount {
-            friendly_name: String::from("jeff"),
-            trust_table: TrustTable{
-                entries: entries.to_vec(),
-            }
-        });
-        assert_eq!(expected, result);
-
+    fn test_pack_trusttableentry() {
+        // pack
+        let trust_table_entry = TrustTableEntry {
+            to: Pubkey::new_unique().to_bytes(),
+            value: 0.1,
+        };
+        let packed = trust_table_entry.try_to_vec().unwrap();
+        // unpack
+        let decoded = TrustTableEntry::try_from_slice(&packed).unwrap();
+        assert_eq!(trust_table_entry, decoded);
     }
 
     #[test]
-    fn test_register_resource() {
+    fn test_pack_trusttable() {
+        // pack
+        let entries = [TrustTableEntry {
+            to: Pubkey::new_unique().to_bytes(),
+            value: 0.1,
+        }; MAX_TRUST_TABLE_SIZE];
+        let trust_table = TrustTable { entries: entries };
+        let packed = trust_table.try_to_vec().unwrap();
+        // unpack
+        let decoded = TrustTable::try_from_slice(&packed).unwrap();
+        assert_eq!(trust_table, decoded);
+    }
+
+    #[test]
+    fn test_upack_update_account() {
+        let mut data = Vec::<u8>::new();
+        data.push(0);
+        let search_engine_account = SearchEngineAccount {
+            friendly_name: String::from("jeff"),
+            trust_table: TrustTable {
+                entries: [TrustTableEntry {
+                    to: Pubkey::new_unique().to_bytes(),
+                    value: 1.1,
+                }; MAX_TRUST_TABLE_SIZE],
+            },
+        };
+        data.append(&mut search_engine_account.try_to_vec().unwrap());
+
+        let result = SearchEngineInstruction::unpack(&data).unwrap();
+        let expected = SearchEngineInstruction::UpdateAccount(search_engine_account);
+        assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn test_unpack_register_resource() {
         let mut data = Vec::new();
         data.push(1);
-
-        let result = SearchEngineInstruction::unpack(&data).unwrap();
-        let expected = SearchEngineInstruction::RegisterResource(Resource {
-            address: Pubkey::new_unique(),
-            location: Location{
-                zip: String::from("12345")
+        let resource = Resource {
+            address: Pubkey::new_unique().to_bytes(),
+            location: Location {
+                zip: String::from("12345"),
             },
             name: String::from("test"),
             trust_threshold: 0.0,
-        });
+        };
+        data.append(&mut resource.try_to_vec().unwrap());
+
+        let result = SearchEngineInstruction::unpack(&data).unwrap();
+        let expected = SearchEngineInstruction::RegisterResource(resource);
         assert_eq!(expected, result);
     }
 
-
     #[test]
-    fn test_register_intent() {
+    fn test_unpack_register_intent() {
         let mut data = Vec::new();
         data.push(2);
-
-        let result = SearchEngineInstruction::unpack(&data).unwrap();
-        let expected = SearchEngineInstruction::RegisterIntent(Resource {
-            address: Pubkey::new_unique(),
-            location: Location{
-                zip: String::from("12345")
+        let resource = Resource {
+            address: Pubkey::new_unique().to_bytes(),
+            location: Location {
+                zip: String::from("12345"),
             },
             name: String::from("test"),
             trust_threshold: 0.0,
-        });
+        };
+        data.append(&mut resource.try_to_vec().unwrap());
+
+        let result = SearchEngineInstruction::unpack(&data).unwrap();
+        let expected = SearchEngineInstruction::RegisterIntent(resource);
         assert_eq!(expected, result);
     }
 }

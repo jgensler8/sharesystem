@@ -63,11 +63,16 @@ fn process_instruction(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::error::SearchEngineError;
+    use crate::{
+        error::SearchEngineError,
+        instruction::{TrustTable, TrustTableEntry},
+        constants::MAX_TRUST_TABLE_SIZE,
+    };
     use byteorder::{ByteOrder, LittleEndian};
     use solana_program::clock::Epoch;
     use solana_program::program_error::ProgramError;
     use std::mem;
+    use borsh::{BorshSerialize};
 
     #[test]
     fn test_missing_instruction_data() {
@@ -92,7 +97,7 @@ mod test {
         let instruction_data: Vec<u8> = Vec::new();
         let result = process_instruction(&program_id, &accounts, &instruction_data);
         let _result = match result {
-            Ok(_ok) => assert_eq!(true, false),
+            Ok(_ok) => assert_eq!(true, false, "process_instruction should have triggered error"),
             Err(err) => assert_eq!(
                 ProgramError::from(SearchEngineError::InvalidInstruction),
                 err
@@ -122,10 +127,21 @@ mod test {
 
         let mut instruction_data: Vec<u8> = Vec::new();
         instruction_data.push(0);
+        let search_engine_account = SearchEngineAccount {
+            friendly_name: String::from("jeff"),
+            trust_table: TrustTable {
+                entries: [TrustTableEntry {
+                    to: Pubkey::new_unique().to_bytes(),
+                    value: 1.1,
+                }; MAX_TRUST_TABLE_SIZE],
+            },
+        };
+        instruction_data.append(&mut search_engine_account.try_to_vec().unwrap());
+
         let result = process_instruction(&program_id, &accounts, &instruction_data);
         let _result = match result {
             Ok(ok) => assert_eq!((), ok),
-            Err(_err) => assert_eq!(true, false),
+            Err(_err) => assert_eq!(true, false, "process_instruction should NOT have triggered error"),
         };
     }
 }
