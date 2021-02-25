@@ -393,13 +393,13 @@ export class SearchEngineAPI implements ISearchEngine {
     return [
       new Resource(
         "palo alto potatoes",
-        "9420",
+        new Location("9420"),
         new PublicKey("4RmyNU1MCKkqLa6sHs8CC75gXrXaBw6mH9Z3ApkEkJvn"),
         1.5,
       ),
       new Resource(
         "mountain view tomatoes",
-        "94040",
+        new Location("94040"),
         new PublicKey("2X2sFvM3G8GGzDq2whqTbxFPGyv7U4PRomL8G8LJm3Y6"),
         0.9,
       ),
@@ -476,7 +476,7 @@ export class MockSearchEngineAPI implements ISearchEngine {
   }
 
   async registerResource(resource: Resource): Promise<void> {
-    let resourceList = await this.listResources();
+    let resourceList = await this.listResources(new Location(""));
     resourceList.push(resource);
     this.store.put(this.RESOURCES_KEY, resourceList);
   }
