@@ -30,14 +30,29 @@ import { key } from 'ionicons/icons';
  */
 export async function loadSearchEngineAddressFromEnvironment(): Promise<PublicKey> {
   // TODO(jeffg): support production environment
-  return new PublicKey(searchengine["ProgramId"] || searchengine["programId"]);
+  if("ProgramId" in searchengine) {
+    return new PublicKey(searchengine["ProgramId"]);
+  }
+  if("programId" in searchengine) {
+    return new PublicKey(searchengine["programId"]);
+  }
+  return new Account().publicKey;
 }
 export async function loadResourceAddressFromEnvironment(): Promise<PublicKey> {
   // TODO(jeffg): support production environment
-  return new PublicKey(resource["ProgramId"] || resource["programId"]);
+  if("ProgramId" in resource) {
+    return new PublicKey(resource["ProgramId"]);
+  }
+  if("programId" in resource) {
+    return new PublicKey(resource["programId"]);
+  }
+  return new Account().publicKey;
 }
 export async function loadAccountFromEnvironment(): Promise<Account> {
-  return new Account(Uint8Array.from(privateKey));
+  if(privateKey){
+    return new Account(Uint8Array.from(privateKey));
+  }
+  return new Account;
 }
 
 /**
