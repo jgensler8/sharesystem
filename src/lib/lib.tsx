@@ -247,6 +247,8 @@ export class ResourceAPI implements IResourceAPI {
 
 export interface ISearchEngine {
 
+  healthCheck(): Promise<void>;
+
   // ************************************************************************
   // Account
   // ************************************************************************
@@ -301,6 +303,25 @@ export class SearchEngineAPI implements ISearchEngine {
     this.programId = programId;
     this.store = store;
     this.payerAccount = payerAccount;
+  }
+
+  async healthCheck(): Promise<void> {
+    const transaction = new Transaction().add(
+      new TransactionInstruction({
+        keys: [],
+        programId: this.programId,
+        data: Buffer.alloc(1),
+      })
+    );
+    await sendAndConfirmTransaction(
+      this.connection,
+      transaction,
+      [this.payerAccount],
+      {
+        commitment: 'singleGossip',
+        preflightCommitment: 'singleGossip',
+      },
+    );
   }
 
   async createDefaultSearchEngineAccount(friendlyName: string): Promise<SearchEngineAccount> {
@@ -433,6 +454,8 @@ export class MockSearchEngineAPI implements ISearchEngine {
   constructor(store: Store) {
     this.store = store;
   }
+
+  async healthCheck(): Promise<void> {}
 
   async createDefaultSearchEngineAccount(friendlyName: string): Promise<SearchEngineAccount> {
     let account = new SearchEngineAccount(new Account(), friendlyName, new TrustTable([]));

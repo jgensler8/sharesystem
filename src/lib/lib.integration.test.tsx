@@ -28,13 +28,18 @@ describe('serach engine', () => {
     expect(createdAccount).toStrictEqual(storedAccount);
   });
 
-  test('can read trust table', async () => {
-    // assumes account created already
-    let defaultAccount = await system.getDefaultSearchEngineAccount();
-    defaultAccount.trustTable = new TrustTable([new TrustTableEntry(new PublicKey("4RmyNU1MCKkqLa6sHs8CC75gXrXaBw6mH9Z3ApkEkJvn"), 0.1)])
-    system.updateSearchEngineAccount(defaultAccount);
-
-    let storedAccount = await system.getAccountDetails(defaultAccount.account.publicKey);
-    expect(defaultAccount).toStrictEqual(storedAccount);
+  test('healthcheck', async () => {
+    await system.healthCheck();
   })
+
+  // test('can read trust table', async () => {
+  //   // assumes account created already
+  //   let defaultAccount = await system.getDefaultSearchEngineAccount();
+  //   defaultAccount.trustTable = new TrustTable([new TrustTableEntry(new PublicKey("4RmyNU1MCKkqLa6sHs8CC75gXrXaBw6mH9Z3ApkEkJvn"), 0.1)])
+  //   system.updateSearchEngineAccount(defaultAccount);
+
+  //   let storedAccount = await system.getAccountDetails(defaultAccount.account.publicKey);
+  //   expect(defaultAccount).toStrictEqual(storedAccount);
+  // })
+
 })

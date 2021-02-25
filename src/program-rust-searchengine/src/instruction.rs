@@ -1,4 +1,10 @@
-use crate::constants::MAX_TRUST_TABLE_SIZE;
+use crate::constants::{
+    MAX_TRUST_TABLE_SIZE,
+    INSTRUCTION_DEFAULT,
+    INSTRUCTION_UPDATE_ACCOUNT,
+    INSTRUCTION_REGISTER_RESOURCE,
+    INSTRUCTION_REGISTER_INTENT,
+};
 use crate::error::SearchEngineError::InvalidInstruction;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{program_error::ProgramError};
@@ -61,6 +67,7 @@ pub struct Resource {
 #[repr(C)]
 #[derive(Debug, PartialEq)]
 pub enum SearchEngineInstruction {
+    Default(),
     UpdateAccount(SearchEngineAccount),
     RegisterResource(Resource),
     RegisterIntent(Resource),
@@ -70,7 +77,10 @@ impl SearchEngineInstruction {
     pub fn unpack(input: &[u8]) -> Result<Self, ProgramError> {
         let (&tag, _rest) = input.split_first().ok_or(InvalidInstruction)?;
         Ok(match tag {
-            0 => {
+            INSTRUCTION_DEFAULT => {
+                Self::Default()
+            }
+            INSTRUCTION_UPDATE_ACCOUNT => {
                 match SearchEngineAccount::try_from_slice(_rest) {
                     Ok(account) => Self::UpdateAccount(account),
                     Err(_err) => {
@@ -78,7 +88,7 @@ impl SearchEngineInstruction {
                     }
                 }
             }
-            1 => {
+            INSTRUCTION_REGISTER_RESOURCE => {
                 match Resource::try_from_slice(_rest) {
                     Ok(resource) => Self::RegisterResource(resource),
                     Err(_err) => {
@@ -86,7 +96,7 @@ impl SearchEngineInstruction {
                     }
                 }
             }
-            2 => {
+            INSTRUCTION_REGISTER_INTENT => {
                 match Resource::try_from_slice(_rest) {
                     Ok(resource) => Self::RegisterIntent(resource),
                     Err(_err) => {
@@ -153,7 +163,7 @@ mod test {
     #[test]
     fn test_upack_update_account() {
         let mut data = Vec::<u8>::new();
-        data.push(0);
+        data.push(1);
         let search_engine_account = SearchEngineAccount {
             friendly_name: String::from("jeff"),
             trust_table: TrustTable {
@@ -173,7 +183,7 @@ mod test {
     #[test]
     fn test_unpack_register_resource() {
         let mut data = Vec::new();
-        data.push(1);
+        data.push(2);
         let resource = Resource {
             address: Pubkey::new_unique().to_bytes(),
             location: Location {
@@ -192,7 +202,7 @@ mod test {
     #[test]
     fn test_unpack_register_intent() {
         let mut data = Vec::new();
-        data.push(2);
+        data.push(3);
         let resource = Resource {
             address: Pubkey::new_unique().to_bytes(),
             location: Location {

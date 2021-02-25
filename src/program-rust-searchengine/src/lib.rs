@@ -14,6 +14,9 @@ fn _process_instruction(
 ) -> ProgramResult {
     let instruction = SearchEngineInstruction::unpack(instruction_data)?;
     match instruction {
+        SearchEngineInstruction::Default() => {
+            info!("OK")
+        }
         SearchEngineInstruction::UpdateAccount(SearchEngineAccount{
             friendly_name: _,
             trust_table: _,
