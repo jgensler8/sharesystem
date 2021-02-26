@@ -9,10 +9,13 @@ import {
   TransactionInstruction,
   Transaction,
   sendAndConfirmTransaction,
+  get_account_info,
 } from '@solana/web3.js';
+import { serialize } from 'borsh';
 import { enter } from 'ionicons/icons';
 import { randomInt } from 'mz/crypto';
 import { Store, WrongInstanceError, KeyNotFoundError } from './util';
+import { TextEncoder } from "web-encoding";
 
 /*
 Memory Structures
@@ -63,6 +66,15 @@ Resources
   auth: searchengine_id == accounts[0].owner and accounts[0].is_signer == true
 */
 
+class BorshConstructable {
+  constructor(properties: object) {
+    Object.keys(properties).map((key) => {
+      this[key] = properties[key];
+    });
+  }
+}
+export let AllBorshSchemas = new Map();
+
 export class TrustTableEntry {
   id: PublicKey;
   value: number;
@@ -71,27 +83,89 @@ export class TrustTableEntry {
     this.id = id;
     this.value = value;
   }
-}
 
+  to_borsh(): BorshTrustTableEntry {
+    return new BorshTrustTableEntry({
+      id: Uint8Array.from(this.id.toBuffer()),
+      value: this.value
+    })
+  }
+}
+export class BorshTrustTableEntry extends BorshConstructable {
+  to_typed(): TrustTableEntry {
+    return new TrustTableEntry(new PublicKey(this.id), this.value);
+  }
+}
+AllBorshSchemas.set(BorshTrustTableEntry, {
+  kind: 'struct',
+  fields: [
+    ['id', [32]],
+    ['value', 'u8']
+  ]
+});
+
+
+export let MAX_TRUST_TABLE_SIZE = 1;
 export class TrustTable {
   entries: Array<TrustTableEntry>;
 
   constructor(entries: Array<TrustTableEntry>) {
     this.entries = entries;
   }
+
+  to_borsh(): BorshTrustTable {
+    return new BorshTrustTable({
+      entries: this.entries.map(entry => entry.to_borsh()),
+    })
+  }
 }
+export class BorshTrustTable extends BorshConstructable {
+  to_typed(): TrustTable {
+    return new TrustTable(
+      this.entries.map(entry => entry.to_typed()),
+    )
+  }
+}
+AllBorshSchemas.set(BorshTrustTable, {
+  kind: 'struct',
+  fields: [
+    ['entries', [BorshTrustTableEntry]]
+  ]
+})
 
 export class SearchEngineAccount {
-  account: Account;
   friendlyName: string;
   trustTable: TrustTable;
 
-  constructor(account: Account, friendlyName: string, trustTable: TrustTable) {
-    this.account = account;
+  constructor(friendlyName: string, trustTable: TrustTable) {
     this.friendlyName = friendlyName;
     this.trustTable = trustTable
   }
+
+  to_borsh(): BorshSearchEngineAccount {
+    let name = new Uint8Array(12);
+    let encoder = new TextEncoder("utf-8");
+    let nameSlice = encoder.encode(this.friendlyName).slice(0, 12);
+    name.set(nameSlice);
+
+    return new BorshSearchEngineAccount({
+      friendlyName: name,
+      trustTable: this.trustTable.to_borsh(), 
+    })
+  }
 }
+export class BorshSearchEngineAccount extends BorshConstructable {
+  to_typed(): SearchEngineAccount {
+    return new SearchEngineAccount(this.friendlyName, this.trustTable.to_typed());
+  }
+}
+AllBorshSchemas.set(BorshSearchEngineAccount, {
+  kind: 'struct',
+  fields: [
+    ['friendlyName', [12]],
+    ['trustTable', BorshTrustTable]
+  ]
+})
 
 export class ResourceInstance {
   quantity: number;
@@ -253,13 +327,13 @@ export interface ISearchEngine {
   // Account
   // ************************************************************************
 
-  createDefaultSearchEngineAccount(friendlyName: string): Promise<SearchEngineAccount>;
+  createDefaultSearchEngineAccount(account: Account, friendlyName: string): Promise<SearchEngineAccount>;
 
   getDefaultSearchEngineAccount(): Promise<SearchEngineAccount>;
 
-  updateSearchEngineAccount(account: SearchEngineAccount): Promise<void>;
+  updateSearchEngineAccount(account: Account, searchEngineAccount: SearchEngineAccount): Promise<void>;
 
-  getAccountDetails(address: PublicKey): Promise<SearchEngineAccount>;
+  getAccountDetails(key: PublicKey): Promise<SearchEngineAccount>;
 
   // ************************************************************************
   // Resource
@@ -295,8 +369,12 @@ export class SearchEngineAPI implements ISearchEngine {
   payerAccount: Account;
   store: Store;
   readonly ACCOUNT_KEY = "searchengine_this_account"
-  readonly SEARCH_ENGINE_ACCOUNT_SPACE = 10;
+  readonly SEARCH_ENGINE_ACCOUNT_SPACE = 368;
   readonly SEARCH_ENGINE_ACCOUNT_LAMPORTS = 100;
+  readonly INSTRUCTION_DEFAULT = 0;
+  readonly INSTRUCTION_UPDATE_ACCOUNT = 1;
+  readonly INSTRUCTION_REGISTER_RESOURCE = 2;
+  readonly INSTRUCTION_REGISTER_INTENT = 3;
 
   constructor(connection: Connection, programId: PublicKey, store: Store, payerAccount: Account) {
     this.connection = connection;
@@ -324,13 +402,13 @@ export class SearchEngineAPI implements ISearchEngine {
     );
   }
 
-  async createDefaultSearchEngineAccount(friendlyName: string): Promise<SearchEngineAccount> {
-    let searchEngineAccount = new SearchEngineAccount(new Account(), friendlyName, new TrustTable([]));
+  async createDefaultSearchEngineAccount(account: Account, friendlyName: string): Promise<SearchEngineAccount> {
+    let searchEngineAccount = new SearchEngineAccount(friendlyName, new TrustTable([]));
     // store on chain
     const transaction = new Transaction().add(
       SystemProgram.createAccount({
         fromPubkey: this.payerAccount.publicKey,
-        newAccountPubkey: searchEngineAccount.account.publicKey,
+        newAccountPubkey: account.publicKey,
         lamports: this.SEARCH_ENGINE_ACCOUNT_LAMPORTS,
         space: this.SEARCH_ENGINE_ACCOUNT_SPACE,
         programId: this.programId,
@@ -339,7 +417,7 @@ export class SearchEngineAPI implements ISearchEngine {
     await sendAndConfirmTransaction(
       this.connection,
       transaction,
-      [this.payerAccount, searchEngineAccount.account],
+      [this.payerAccount, account],
       {
         commitment: 'singleGossip',
         preflightCommitment: 'singleGossip',
@@ -364,41 +442,47 @@ export class SearchEngineAPI implements ISearchEngine {
     return this._getSearchEngineAccount(this.ACCOUNT_KEY);
   }
 
-  async updateSearchEngineAccount(account: SearchEngineAccount): Promise<void> {
+  async updateSearchEngineAccount(account: Account, searchEngineAccount: SearchEngineAccount): Promise<void> {
     // update internal store
+    this.store.put(this.ACCOUNT_KEY, searchEngineAccount);
     // update blockchain with transaction
+    let instruction = new Uint8Array([this.INSTRUCTION_UPDATE_ACCOUNT]);
+    let instruction_data = serialize(AllBorshSchemas, searchEngineAccount.to_borsh());
+    console.log(instruction_data.length)
+    let combined = new Uint8Array(1 + instruction_data.length);
+    combined.set(instruction);
+    combined.set(instruction_data, 1);
+    console.log(combined);
+    const transaction = new Transaction().add(
+      new TransactionInstruction({
+        keys: [{pubkey: account.publicKey, isSigner: false, isWritable: true}],
+        programId: this.programId,
+        data: Buffer.from(combined),
+      }),
+    );
+    await sendAndConfirmTransaction(
+      this.connection,
+      transaction,
+      [this.payerAccount],
+      {
+        commitment: 'singleGossip',
+        preflightCommitment: 'singleGossip',
+      },
+    );
   }
 
-  async getAccountDetails(address: PublicKey): Promise<SearchEngineAccount> {
+  async getAccountDetails(key: PublicKey): Promise<SearchEngineAccount> {
     // check cache
     try {
-      return await this._getSearchEngineAccount(address.toBase58());
+      return await this._getSearchEngineAccount(key.toBase58());
     } catch (error) {
       if (error instanceof KeyNotFoundError) {
         // TODO: change to get_account_info
-
-        // read from chain
-        const transaction = new Transaction().add(
-          new TransactionInstruction({
-            keys: [
-              {pubkey: address, isSigner: false, isWritable: false},
-            ],
-            programId: this.programId,
-            data: Buffer.alloc(1),
-          })
-        );
-        let searchEngineAccount = await sendAndConfirmTransaction(
-          this.connection,
-          transaction,
-          [this.payerAccount],
-          {
-            commitment: 'singleGossip',
-            preflightCommitment: 'singleGossip',
-          },
-        );
+        let info = await this.connection.getAccountInfo(key);
+        console.log(info);
         // store in cache
         // this.store.put(searchEngineAccount.account.publicKey.toBase58(), searchEngineAccount)
-        return new SearchEngineAccount(new Account(), "test", new TrustTable([]));
+        return new SearchEngineAccount("test", new TrustTable([]));
       }
       throw error;
     }
@@ -455,12 +539,12 @@ export class MockSearchEngineAPI implements ISearchEngine {
     this.store = store;
   }
 
-  async healthCheck(): Promise<void> {}
+  async healthCheck(): Promise<void> { }
 
-  async createDefaultSearchEngineAccount(friendlyName: string): Promise<SearchEngineAccount> {
-    let account = new SearchEngineAccount(new Account(), friendlyName, new TrustTable([]));
-    this.store.put(this.ACCOUNT_KEY, account)
-    return account;
+  async createDefaultSearchEngineAccount(account: Account, friendlyName: string): Promise<SearchEngineAccount> {
+    let searchEngineAccount = new SearchEngineAccount(new Account(), friendlyName, new TrustTable([]));
+    this.store.put(this.ACCOUNT_KEY, searchEngineAccount)
+    return searchEngineAccount;
   }
 
   async _getSearchEngineAccount(key: string): Promise<SearchEngineAccount> {
@@ -478,7 +562,7 @@ export class MockSearchEngineAPI implements ISearchEngine {
     return this._getSearchEngineAccount(this.ACCOUNT_KEY);
   }
 
-  async updateSearchEngineAccount(account: SearchEngineAccount): Promise<void> {
+  async updateSearchEngineAccount(account: Account, searchEngineAccount: SearchEngineAccount): Promise<void> {
     this.store.put(this.ACCOUNT_KEY, account)
   }
 

@@ -34,6 +34,8 @@ TODO
 
 [`./src/components/SolanaConnection.tsx`](./src/components/SolanaConnection.tsx) contains a React component with a render-prop to inject the TypeScript API into any React application
 
+Note: borsh-js does not support all types that Rust supports
+
 #### Back End (Rust)
 
 [`./src/program-rust-searchengine`](./src/program-rust-searchengine) contract that supports finding and indexing Resources

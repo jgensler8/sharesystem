@@ -33,7 +33,7 @@ operations
 #[derive(BorshSerialize, BorshDeserialize, Clone, Copy, PartialEq, Debug, Default)]
 pub struct TrustTableEntry {
     pub to: [u8; 32],
-    pub value: f32,
+    pub value: u8,
 }
 
 #[repr(C)]
@@ -45,7 +45,7 @@ pub struct TrustTable {
 #[repr(C)]
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq)]
 pub struct SearchEngineAccount {
-    pub friendly_name: String,
+    pub friendly_name: [u8; 12],
     pub trust_table: TrustTable,
 }
 
@@ -138,7 +138,7 @@ mod test {
         // pack
         let trust_table_entry = TrustTableEntry {
             to: Pubkey::new_unique().to_bytes(),
-            value: 0.1,
+            value: 10,
         };
         let packed = trust_table_entry.try_to_vec().unwrap();
         // unpack
@@ -151,7 +151,7 @@ mod test {
         // pack
         let entries = [TrustTableEntry {
             to: Pubkey::new_unique().to_bytes(),
-            value: 0.1,
+            value: 10,
         }; MAX_TRUST_TABLE_SIZE];
         let trust_table = TrustTable { entries: entries };
         let packed = trust_table.try_to_vec().unwrap();
@@ -164,12 +164,17 @@ mod test {
     fn test_upack_update_account() {
         let mut data = Vec::<u8>::new();
         data.push(1);
+        let name_str = String::from("jeff");
+        let mut name = [0u8; 12];
+        for (place, data) in name.iter_mut().zip(name_str.as_bytes().iter()) {
+            *place = *data
+        }
         let search_engine_account = SearchEngineAccount {
-            friendly_name: String::from("jeff"),
+            friendly_name: name,
             trust_table: TrustTable {
                 entries: [TrustTableEntry {
                     to: Pubkey::new_unique().to_bytes(),
-                    value: 1.1,
+                    value: 10,
                 }; MAX_TRUST_TABLE_SIZE],
             },
         };

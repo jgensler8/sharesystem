@@ -1,5 +1,5 @@
 import { Connection, PublicKey, Account } from '@solana/web3.js';
-import { SearchEngineAPI, TrustTable, TrustTableEntry } from './lib'
+import { SearchEngineAPI, TrustTable, TrustTableEntry, MAX_TRUST_TABLE_SIZE } from './lib'
 import { establishConnection, loadSearchEngineAddressFromEnvironment, loadAccountFromEnvironment, Store, KeyNotFoundError } from './util'
 
 describe('serach engine', () => {
@@ -7,6 +7,7 @@ describe('serach engine', () => {
   let address: PublicKey;
   let store: Store;
   let payerAccount: Account;
+  let searchEngineAccount: Account;
   let system: SearchEngineAPI;
 
   beforeAll(async () => {
@@ -14,6 +15,8 @@ describe('serach engine', () => {
     address = await loadSearchEngineAddressFromEnvironment();
     store = new Store();
     payerAccount = await loadAccountFromEnvironment();
+    searchEngineAccount = new Account();
+
     system = new SearchEngineAPI(conn, address, store, payerAccount);
 
     console.log(`payer account: ${payerAccount.publicKey.toBase58()}`)
@@ -23,7 +26,7 @@ describe('serach engine', () => {
   test('can create and read search engine account', async () => {
     await expect(system.getDefaultSearchEngineAccount()).rejects.toEqual(new KeyNotFoundError());
 
-    let createdAccount = await system.createDefaultSearchEngineAccount("name");
+    let createdAccount = await system.createDefaultSearchEngineAccount(searchEngineAccount, "jeff");
     let storedAccount = await system.getDefaultSearchEngineAccount();
     expect(createdAccount).toStrictEqual(storedAccount);
   });
@@ -32,14 +35,15 @@ describe('serach engine', () => {
     await system.healthCheck();
   })
 
-  // test('can read trust table', async () => {
-  //   // assumes account created already
-  //   let defaultAccount = await system.getDefaultSearchEngineAccount();
-  //   defaultAccount.trustTable = new TrustTable([new TrustTableEntry(new PublicKey("4RmyNU1MCKkqLa6sHs8CC75gXrXaBw6mH9Z3ApkEkJvn"), 0.1)])
-  //   system.updateSearchEngineAccount(defaultAccount);
+  test('can read trust table', async () => {
+    // assumes account created already
+    let defaultAccount = await system.getDefaultSearchEngineAccount();
+    let entries = Array(MAX_TRUST_TABLE_SIZE).fill(new TrustTableEntry(new PublicKey("FFAAFFAAFFAABBCCAABBCCDDEEFFaabbccAABBCCDDEE"), 10));
+    defaultAccount.trustTable = new TrustTable(entries);
+    await system.updateSearchEngineAccount(searchEngineAccount, defaultAccount);
 
-  //   let storedAccount = await system.getAccountDetails(defaultAccount.account.publicKey);
-  //   expect(defaultAccount).toStrictEqual(storedAccount);
-  // })
+    let storedAccount = await system.getAccountDetails(searchEngineAccount.publicKey);
+    expect(defaultAccount).toStrictEqual(storedAccount);
+  })
 
 })

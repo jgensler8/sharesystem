@@ -1,4 +1,4 @@
-pub const MAX_TRUST_TABLE_SIZE: usize = 10;
+pub const MAX_TRUST_TABLE_SIZE: usize = 1;
 
 pub const INSTRUCTION_DEFAULT: u8 = 0;
 pub const INSTRUCTION_UPDATE_ACCOUNT: u8 = 1;

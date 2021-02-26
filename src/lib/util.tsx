@@ -52,7 +52,7 @@ export async function loadAccountFromEnvironment(): Promise<Account> {
   if(privateKey){
     return new Account(Uint8Array.from(privateKey));
   }
-  return new Account;
+  return new Account();
 }
 
 /**

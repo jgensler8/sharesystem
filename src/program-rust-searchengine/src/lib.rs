@@ -6,10 +6,11 @@ use crate::instruction::{SearchEngineAccount, Resource, SearchEngineInstruction}
 use solana_program::{
     account_info::AccountInfo, entrypoint, entrypoint::ProgramResult, info, pubkey::Pubkey,
 };
+use borsh::BorshSerialize;
 
 fn _process_instruction(
     _program_id: &Pubkey,
-    _accounts: &[AccountInfo],
+    accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
     let instruction = SearchEngineInstruction::unpack(instruction_data)?;
@@ -17,11 +18,13 @@ fn _process_instruction(
         SearchEngineInstruction::Default() => {
             info!("OK")
         }
-        SearchEngineInstruction::UpdateAccount(SearchEngineAccount{
-            friendly_name: _,
-            trust_table: _,
-        }) => {
-            info!("would update account");
+        SearchEngineInstruction::UpdateAccount(account) => {
+            info!("trying to update account");
+            // TODO check accounts length 1 and first account is signer
+            let account = account.try_to_vec().unwrap();
+            let mut account_data = accounts[0].data.borrow_mut();
+            account_data.copy_from_slice(&account);
+            // account_data.copy_within(&account, account.len());
         }
         SearchEngineInstruction::RegisterResource(Resource {
             address: _,
@@ -69,20 +72,21 @@ mod test {
     use crate::{
         error::SearchEngineError,
         instruction::{TrustTable, TrustTableEntry},
-        constants::MAX_TRUST_TABLE_SIZE,
+        constants::{MAX_TRUST_TABLE_SIZE, INSTRUCTION_UPDATE_ACCOUNT},
     };
     use byteorder::{ByteOrder, LittleEndian};
     use solana_program::clock::Epoch;
     use solana_program::program_error::ProgramError;
     use std::mem;
     use borsh::{BorshSerialize};
+    use std::str::FromStr;
 
     #[test]
     fn test_missing_instruction_data() {
         let program_id = Pubkey::default();
         let key = Pubkey::default();
         let mut lamports = 0;
-        let mut data = vec![0; mem::size_of::<u64>()];
+        let mut data = vec![0u8; 368];
         LittleEndian::write_u64(&mut data, 0);
         let owner = Pubkey::default();
         let account = AccountInfo::new(
@@ -113,7 +117,7 @@ mod test {
         let program_id = Pubkey::default();
         let key = Pubkey::default();
         let mut lamports = 0;
-        let mut data = vec![0; mem::size_of::<u64>()];
+        let mut data = vec![0u8; 368];
         LittleEndian::write_u64(&mut data, 0);
         let owner = Pubkey::default();
         let account = AccountInfo::new(
@@ -129,22 +133,30 @@ mod test {
         let accounts = vec![account];
 
         let mut instruction_data: Vec<u8> = Vec::new();
-        instruction_data.push(0);
+        instruction_data.push(INSTRUCTION_UPDATE_ACCOUNT);
+        let to_pubkey = Pubkey::from_str("FFAAFFAAFFAABBCCAABBCCDDEEFFaabbccAABBCCDDEE").unwrap();
+        let name_str = String::from("jeff");
+        let mut name = [0u8; 12];
+        for (place, data) in name.iter_mut().zip(name_str.as_bytes().iter()) {
+            *place = *data
+        }
         let search_engine_account = SearchEngineAccount {
-            friendly_name: String::from("jeff"),
+            friendly_name: name,
             trust_table: TrustTable {
                 entries: [TrustTableEntry {
-                    to: Pubkey::new_unique().to_bytes(),
-                    value: 1.1,
+                    to: to_pubkey.to_bytes(),
+                    value: 10,
                 }; MAX_TRUST_TABLE_SIZE],
             },
         };
         instruction_data.append(&mut search_engine_account.try_to_vec().unwrap());
 
-        let result = process_instruction(&program_id, &accounts, &instruction_data);
-        let _result = match result {
-            Ok(ok) => assert_eq!((), ok),
-            Err(_err) => assert_eq!(true, false, "process_instruction should NOT have triggered error"),
-        };
+        println!("{:?}", instruction_data);
+        assert_eq!(instruction_data.len(), 46);
+        assert_eq!(true, false);
+
+        let result = process_instruction(&program_id, &accounts, &instruction_data).unwrap();
+        assert_eq!((), result);
+        assert_eq!(accounts[0].data.borrow().len(), search_engine_account.try_to_vec().unwrap().len());
     }
 }
