@@ -105,39 +105,39 @@ AllBorshSchemas.set(BorshTrustTableEntry, {
 });
 
 
-export let MAX_TRUST_TABLE_SIZE = 1;
-export class TrustTable {
-  entries: Array<TrustTableEntry>;
+// export let MAX_TRUST_TABLE_SIZE = 1;
+// export class TrustTable {
+//   entries: Array<TrustTableEntry>;
 
-  constructor(entries: Array<TrustTableEntry>) {
-    this.entries = entries;
-  }
+//   constructor(entries: Array<TrustTableEntry>) {
+//     this.entries = entries;
+//   }
 
-  to_borsh(): BorshTrustTable {
-    return new BorshTrustTable({
-      entries: this.entries.map(entry => entry.to_borsh()),
-    })
-  }
-}
-export class BorshTrustTable extends BorshConstructable {
-  to_typed(): TrustTable {
-    return new TrustTable(
-      this.entries.map(entry => entry.to_typed()),
-    )
-  }
-}
-AllBorshSchemas.set(BorshTrustTable, {
-  kind: 'struct',
-  fields: [
-    ['entries', [BorshTrustTableEntry]]
-  ]
-})
+//   to_borsh(): BorshTrustTable {
+//     return new BorshTrustTable({
+//       entries: this.entries.map(entry => entry.to_borsh()),
+//     })
+//   }
+// }
+// export class BorshTrustTable extends BorshConstructable {
+//   to_typed(): TrustTable {
+//     return new TrustTable(
+//       this.entries.map(entry => entry.to_typed()),
+//     )
+//   }
+// }
+// AllBorshSchemas.set(BorshTrustTable, {
+//   kind: 'struct',
+//   fields: [
+//     ['entries', [BorshTrustTableEntry]]
+//   ]
+// })
 
 export class SearchEngineAccount {
   friendlyName: string;
-  trustTable: TrustTable;
+  trustTable: Array<TrustTableEntry>;
 
-  constructor(friendlyName: string, trustTable: TrustTable) {
+  constructor(friendlyName: string, trustTable: List<TrustTableEntry>) {
     this.friendlyName = friendlyName;
     this.trustTable = trustTable
   }
@@ -148,22 +148,23 @@ export class SearchEngineAccount {
     let nameSlice = encoder.encode(this.friendlyName).slice(0, 12);
     name.set(nameSlice);
 
+    let trustTable = serialize(AllBorshSchemas, this.trustTable[0].to_borsh());
     return new BorshSearchEngineAccount({
       friendlyName: name,
-      trustTable: this.trustTable.to_borsh(), 
+      trustTable: trustTable, 
     })
   }
 }
 export class BorshSearchEngineAccount extends BorshConstructable {
   to_typed(): SearchEngineAccount {
-    return new SearchEngineAccount(this.friendlyName, this.trustTable.to_typed());
+    return new SearchEngineAccount(this.friendlyName,  this.trustTable.map(entry => entry.to_typed()));
   }
 }
 AllBorshSchemas.set(BorshSearchEngineAccount, {
   kind: 'struct',
   fields: [
     ['friendlyName', [12]],
-    ['trustTable', BorshTrustTable]
+    ['trustTable', [33]]
   ]
 })
 
@@ -403,7 +404,7 @@ export class SearchEngineAPI implements ISearchEngine {
   }
 
   async createDefaultSearchEngineAccount(account: Account, friendlyName: string): Promise<SearchEngineAccount> {
-    let searchEngineAccount = new SearchEngineAccount(friendlyName, new TrustTable([]));
+    let searchEngineAccount = new SearchEngineAccount(friendlyName, []);
     // store on chain
     const transaction = new Transaction().add(
       SystemProgram.createAccount({

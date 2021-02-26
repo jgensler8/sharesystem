@@ -39,7 +39,7 @@ describe('serach engine', () => {
     // assumes account created already
     let defaultAccount = await system.getDefaultSearchEngineAccount();
     let entries = Array(MAX_TRUST_TABLE_SIZE).fill(new TrustTableEntry(new PublicKey("FFAAFFAAFFAABBCCAABBCCDDEEFFaabbccAABBCCDDEE"), 10));
-    defaultAccount.trustTable = new TrustTable(entries);
+    defaultAccount.trustTable = entries;
     await system.updateSearchEngineAccount(searchEngineAccount, defaultAccount);
 
     let storedAccount = await system.getAccountDetails(searchEngineAccount.publicKey);

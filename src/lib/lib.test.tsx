@@ -58,25 +58,25 @@ describe('borsh', () => {
     expect(trustTableEntry).toEqual(typed);
   })
 
-  test('can deserialize TrustTable', () => {
-    let account = new Account;
-    let trustTableEntry = new TrustTableEntry(account.publicKey, 100);
-    let trustTable = new TrustTable([trustTableEntry]);
+  // test('can deserialize TrustTable', () => {
+  //   let account = new Account;
+  //   let trustTableEntry = new TrustTableEntry(account.publicKey, 100);
+  //   let trustTable = new TrustTable([trustTableEntry]);
 
-    const arr = serialize(AllBorshSchemas, trustTable.to_borsh());
-    const buffer = Buffer.from(arr);
+  //   const arr = serialize(AllBorshSchemas, trustTable.to_borsh());
+  //   const buffer = Buffer.from(arr);
 
-    const deserialized = deserialize(AllBorshSchemas, BorshTrustTable, buffer);
-    const typed = deserialized.to_typed();
-    expect(trustTable).toEqual(typed);
-  })
+  //   const deserialized = deserialize(AllBorshSchemas, BorshTrustTable, buffer);
+  //   const typed = deserialized.to_typed();
+  //   expect(trustTable).toEqual(typed);
+  // })
 
   test('can deserialize SearchEngineAccount', () => {
     let them = new Account;
     let trustTableEntry = new TrustTableEntry(them.publicKey, 100);
-    let trustTable = new TrustTable([trustTableEntry]);
+    // let trustTable = new TrustTable([trustTableEntry]);
     let us = new Account();
-    let searchEngineAccount = new SearchEngineAccount("us", trustTable);
+    let searchEngineAccount = new SearchEngineAccount("us", [trustTableEntry]);
 
     const arr = serialize(AllBorshSchemas, searchEngineAccount.to_borsh());
     const buffer = Buffer.from(arr);

@@ -22,8 +22,11 @@ fn _process_instruction(
             info!("trying to update account");
             // TODO check accounts length 1 and first account is signer
             let account = account.try_to_vec().unwrap();
+            info!("borrowing data");
             let mut account_data = accounts[0].data.borrow_mut();
+            info!("copying");
             account_data.copy_from_slice(&account);
+            info!("done!");
             // account_data.copy_within(&account, account.len());
         }
         SearchEngineInstruction::RegisterResource(Resource {
