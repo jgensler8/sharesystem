@@ -9,245 +9,11 @@ import {
   TransactionInstruction,
   Transaction,
   sendAndConfirmTransaction,
-  get_account_info,
 } from '@solana/web3.js';
-import { serialize } from 'borsh';
-import { enter } from 'ionicons/icons';
-import { randomInt } from 'mz/crypto';
 import { Store, WrongInstanceError, KeyNotFoundError } from './util';
-import { TextEncoder } from "web-encoding";
+import { IResourceAPI, ISearchEngine, Resource, ResourceInstance, Challenege, SearchEngineAccount, Location } from './lib-types';
+import { toBorsh, toTyped } from './lib-serialization';
 
-/*
-Memory Structures
-
-TrustTableEntry
-* to: wallet id (string?)
-* value: float
-
-TrustTable
-* List<TrustTableEntry
-
-Location
-* zip: string
-
-ResourceInstance
-* quantity: float
-* yield_expected: Date
-
-Search Engine
-fields
-* resources Map<Location, Resource>
-operations
-* register_resource(accounts:[owner, program], data:None)
-  auth: accounts[0].is_signer == true and accounts[1].owner ==  accounts[0]
-* list_resources(accounts:[], data:Location)
-  auth: none
-* update_trust_table(accounts:[owner], data:TrustTable)
-  auth: searchengine_id == accounts[0].owner and accounts[0].is_signer == true
-* register_intent(accounts:[owner, program], data:None)
-  auth: searchengine_id == accounts[0].owner and accounts[0].is_signer == true
-* list_intents(accounts[search])
-  auth: none
-
-Resources
-* describe(accounts:[]. data:None) (this might be able to be read directly)
-  auth: none
-* register_intent(accounts:[search_engine, on_behalf_of], data:None)
-  auth: searchengine_id == accounts[0] and accounts[0].is_signer == true
-* record_instance(accounts:[data_account], data:ResourceInstance)
-  auth: program_id == accounts[0].owner and accounts[0].is_signer == true
-* initiate_distribution(accounts:[program_owner])
-  auth: contract.owner == accounts[0] and accounts[0].is_signer == true
-* approve_challenge(accounts:[owner, challenger], data:None)
-  auth: searchengine_id == accounts[0].owner and searchengine_id == accounts[1].owner and accounts[0].is_signer == true
-* deny_challenge(accounts:[owner, challenger], data:None)
-  auth: searchengine_id == accounts[0].owner and searchengine_id == accounts[1].owner and accounts[0].is_signer == true
-* claim(accounts[owner], data:None)
-  auth: searchengine_id == accounts[0].owner and accounts[0].is_signer == true
-*/
-
-class BorshConstructable {
-  constructor(properties: object) {
-    Object.keys(properties).map((key) => {
-      this[key] = properties[key];
-    });
-  }
-}
-export let AllBorshSchemas = new Map();
-
-export class TrustTableEntry {
-  id: PublicKey;
-  value: number;
-
-  constructor(id: PublicKey, value: number) {
-    this.id = id;
-    this.value = value;
-  }
-
-  to_borsh(): BorshTrustTableEntry {
-    return new BorshTrustTableEntry({
-      id: Uint8Array.from(this.id.toBuffer()),
-      value: this.value
-    })
-  }
-}
-export class BorshTrustTableEntry extends BorshConstructable {
-  to_typed(): TrustTableEntry {
-    return new TrustTableEntry(new PublicKey(this.id), this.value);
-  }
-}
-AllBorshSchemas.set(BorshTrustTableEntry, {
-  kind: 'struct',
-  fields: [
-    ['id', [32]],
-    ['value', 'u8']
-  ]
-});
-
-
-// export let MAX_TRUST_TABLE_SIZE = 1;
-// export class TrustTable {
-//   entries: Array<TrustTableEntry>;
-
-//   constructor(entries: Array<TrustTableEntry>) {
-//     this.entries = entries;
-//   }
-
-//   to_borsh(): BorshTrustTable {
-//     return new BorshTrustTable({
-//       entries: this.entries.map(entry => entry.to_borsh()),
-//     })
-//   }
-// }
-// export class BorshTrustTable extends BorshConstructable {
-//   to_typed(): TrustTable {
-//     return new TrustTable(
-//       this.entries.map(entry => entry.to_typed()),
-//     )
-//   }
-// }
-// AllBorshSchemas.set(BorshTrustTable, {
-//   kind: 'struct',
-//   fields: [
-//     ['entries', [BorshTrustTableEntry]]
-//   ]
-// })
-
-export class SearchEngineAccount {
-  friendlyName: string;
-  trustTable: Array<TrustTableEntry>;
-
-  constructor(friendlyName: string, trustTable: List<TrustTableEntry>) {
-    this.friendlyName = friendlyName;
-    this.trustTable = trustTable
-  }
-
-  to_borsh(): BorshSearchEngineAccount {
-    let name = new Uint8Array(12);
-    let encoder = new TextEncoder("utf-8");
-    let nameSlice = encoder.encode(this.friendlyName).slice(0, 12);
-    name.set(nameSlice);
-
-    let trustTable = serialize(AllBorshSchemas, this.trustTable[0].to_borsh());
-    return new BorshSearchEngineAccount({
-      friendlyName: name,
-      trustTable: trustTable, 
-    })
-  }
-}
-export class BorshSearchEngineAccount extends BorshConstructable {
-  to_typed(): SearchEngineAccount {
-    return new SearchEngineAccount(this.friendlyName,  this.trustTable.map(entry => entry.to_typed()));
-  }
-}
-AllBorshSchemas.set(BorshSearchEngineAccount, {
-  kind: 'struct',
-  fields: [
-    ['friendlyName', [12]],
-    ['trustTable', [33]]
-  ]
-})
-
-export class ResourceInstance {
-  quantity: number;
-
-  constructor(quantity: number) {
-    this.quantity = quantity;
-  }
-}
-
-export class Challenege {
-  fromAddress: PublicKey;
-  toAddress: PublicKey;
-  accepted: boolean;
-
-  constructor(fromAddress: PublicKey, toAddress: PublicKey, accepted: boolean) {
-    this.fromAddress = fromAddress;
-    this.toAddress = toAddress;
-    this.accepted = accepted;
-  }
-}
-
-export class ChallengeTable {
-  entries: Array<Challenege>
-
-  constructor(entries: Array<Challenege>) {
-    this.entries = entries;
-  }
-}
-
-export class Location {
-  zip: string;
-
-  constructor(zip: string) {
-    this.zip = zip;
-  }
-}
-
-export class Resource {
-  name: string;
-  location: Location;
-  programId: PublicKey;
-  trustThreshold: number;
-
-  constructor(name: string, location: Location, programId: PublicKey, trustThreshold: number) {
-    this.name = name;
-    this.location = location;
-    this.programId = programId;
-    this.trustThreshold = trustThreshold;
-  }
-}
-
-export interface IResourceAPI {
-  /*
-  Upload of a robot/human that X amount of resource exists, shold prove to other accounts that the resource is available
-  */
-  recordResourceInstance(instance: ResourceInstance): Promise<void>;
-
-  /*
-  Timelocks the resources and (ideally) notifies individuals that they can challenge for their claims
-  Can only be done by resource maintainer
-  Should verify that trust exists between all accounts with intent, remove non-trustworthy accounts, calcuate distribution
-  */
-  initiateDistribution(): Promise<void>;
-
-  /*
-  list challenges that either:
-      * require input
-      * request other's input
-  */
-  listChallenges(): Promise<ChallengeTable>;
-
-  /*
-  approve a challenge to increase challenge trust level and (hopefully/eventually) enable the resource to be claimed
-  */
-  approveChallenge(challenege: Challenege): Promise<void>;
-
-  /*
-  claim the rewards from a challenge
-  */
-  claimChallenge(from: PublicKey): Promise<void>;
-}
 
 export class ResourceAPI implements IResourceAPI {
   resource: Resource;
@@ -320,49 +86,6 @@ export class ResourceAPI implements IResourceAPI {
   }
 }
 
-export interface ISearchEngine {
-
-  healthCheck(): Promise<void>;
-
-  // ************************************************************************
-  // Account
-  // ************************************************************************
-
-  createDefaultSearchEngineAccount(account: Account, friendlyName: string): Promise<SearchEngineAccount>;
-
-  getDefaultSearchEngineAccount(): Promise<SearchEngineAccount>;
-
-  updateSearchEngineAccount(account: Account, searchEngineAccount: SearchEngineAccount): Promise<void>;
-
-  getAccountDetails(key: PublicKey): Promise<SearchEngineAccount>;
-
-  // ************************************************************************
-  // Resource
-  // ************************************************************************
-
-  /*
-  Create resource to share with others. Should have a way for ResourceInstance to be recorded or verified (like posting photo to chain for someone to validate later)
-  Will also need to describe how much memory (based on the number of people * wallet id size * claim pointer size)
-  */
-  registerResource(resource: Resource): Promise<void>;
-
-  /*
-  Find resources able to the claimed. Likely can use zipcode/lat+long plus radius
-  */
-  listResources(location: Location): Promise<Resource[]>;
-
-
-  // ************************************************************************
-  // Intent
-  // ************************************************************************
-
-  /*
-  Signal to resource maintainer that you wish to claim resource by a specific time
-  */
-  recordIntent(account: SearchEngineAccount, resource: PublicKey): Promise<void>;
-
-  listIntents(account: SearchEngineAccount): Promise<Array<PublicKey>>;
-}
 
 export class SearchEngineAPI implements ISearchEngine {
   connection: Connection;
@@ -370,8 +93,7 @@ export class SearchEngineAPI implements ISearchEngine {
   payerAccount: Account;
   store: Store;
   readonly ACCOUNT_KEY = "searchengine_this_account"
-  readonly SEARCH_ENGINE_ACCOUNT_SPACE = 368;
-  readonly SEARCH_ENGINE_ACCOUNT_LAMPORTS = 100;
+  readonly SEARCH_ENGINE_ACCOUNT_SPACE = 45;
   readonly INSTRUCTION_DEFAULT = 0;
   readonly INSTRUCTION_UPDATE_ACCOUNT = 1;
   readonly INSTRUCTION_REGISTER_RESOURCE = 2;
@@ -406,16 +128,17 @@ export class SearchEngineAPI implements ISearchEngine {
   async createDefaultSearchEngineAccount(account: Account, friendlyName: string): Promise<SearchEngineAccount> {
     let searchEngineAccount = new SearchEngineAccount(friendlyName, []);
     // store on chain
+    const lamports = await this.connection.getMinimumBalanceForRentExemption(this.SEARCH_ENGINE_ACCOUNT_SPACE);
     const transaction = new Transaction().add(
       SystemProgram.createAccount({
         fromPubkey: this.payerAccount.publicKey,
         newAccountPubkey: account.publicKey,
-        lamports: this.SEARCH_ENGINE_ACCOUNT_LAMPORTS,
+        lamports: lamports,
         space: this.SEARCH_ENGINE_ACCOUNT_SPACE,
         programId: this.programId,
       }),
     );
-    await sendAndConfirmTransaction(
+    let result = await sendAndConfirmTransaction(
       this.connection,
       transaction,
       [this.payerAccount, account],
@@ -424,7 +147,8 @@ export class SearchEngineAPI implements ISearchEngine {
         preflightCommitment: 'singleGossip',
       },
     );
-    this.store.put(this.ACCOUNT_KEY, searchEngineAccount)
+    await this.updateSearchEngineAccount(account, searchEngineAccount);
+    this.store.put(this.ACCOUNT_KEY, searchEngineAccount);
     return searchEngineAccount;
   }
 
@@ -448,15 +172,13 @@ export class SearchEngineAPI implements ISearchEngine {
     this.store.put(this.ACCOUNT_KEY, searchEngineAccount);
     // update blockchain with transaction
     let instruction = new Uint8Array([this.INSTRUCTION_UPDATE_ACCOUNT]);
-    let instruction_data = serialize(AllBorshSchemas, searchEngineAccount.to_borsh());
-    console.log(instruction_data.length)
+    let instruction_data = toBorsh(searchEngineAccount);
     let combined = new Uint8Array(1 + instruction_data.length);
     combined.set(instruction);
     combined.set(instruction_data, 1);
-    console.log(combined);
     const transaction = new Transaction().add(
       new TransactionInstruction({
-        keys: [{pubkey: account.publicKey, isSigner: false, isWritable: true}],
+        keys: [{ pubkey: account.publicKey, isSigner: false, isWritable: true }],
         programId: this.programId,
         data: Buffer.from(combined),
       }),
@@ -479,11 +201,14 @@ export class SearchEngineAPI implements ISearchEngine {
     } catch (error) {
       if (error instanceof KeyNotFoundError) {
         // TODO: change to get_account_info
-        let info = await this.connection.getAccountInfo(key);
-        console.log(info);
+        let accountInfo = await this.connection.getAccountInfo(key);
+        if (accountInfo == null) {
+          throw "NO ACCOUNT INFO FOUND";
+        }
+        let searchEngineAccount: SearchEngineAccount = toTyped(SearchEngineAccount, accountInfo.data);
         // store in cache
         // this.store.put(searchEngineAccount.account.publicKey.toBase58(), searchEngineAccount)
-        return new SearchEngineAccount("test", new TrustTable([]));
+        return searchEngineAccount;
       }
       throw error;
     }
@@ -527,95 +252,5 @@ export class SearchEngineAPI implements ISearchEngine {
 
   async listIntents(account: SearchEngineAccount): Promise<Array<PublicKey>> {
     return [];
-  }
-}
-
-export class MockSearchEngineAPI implements ISearchEngine {
-  store: Store;
-  readonly ACCOUNT_KEY = "mocksearchengine_this_account"
-  readonly RESOURCES_KEY = "mocksearchengine_resources"
-  readonly INTENTS_KEY = "mocksearchengine_intents"
-
-  constructor(store: Store) {
-    this.store = store;
-  }
-
-  async healthCheck(): Promise<void> { }
-
-  async createDefaultSearchEngineAccount(account: Account, friendlyName: string): Promise<SearchEngineAccount> {
-    let searchEngineAccount = new SearchEngineAccount(new Account(), friendlyName, new TrustTable([]));
-    this.store.put(this.ACCOUNT_KEY, searchEngineAccount)
-    return searchEngineAccount;
-  }
-
-  async _getSearchEngineAccount(key: string): Promise<SearchEngineAccount> {
-    let account = await this.store.get(key);
-    if (!account) {
-      throw new KeyNotFoundError();
-    }
-    if (!(account instanceof SearchEngineAccount)) {
-      throw new WrongInstanceError();
-    }
-    return account;
-  }
-
-  async getDefaultSearchEngineAccount(): Promise<SearchEngineAccount> {
-    return this._getSearchEngineAccount(this.ACCOUNT_KEY);
-  }
-
-  async updateSearchEngineAccount(account: Account, searchEngineAccount: SearchEngineAccount): Promise<void> {
-    this.store.put(this.ACCOUNT_KEY, account)
-  }
-
-  async getAccountDetails(address: PublicKey): Promise<SearchEngineAccount> {
-    // check cache
-    try {
-      return this._getSearchEngineAccount(address.toBase58());
-    } catch (error) {
-      if (error instanceof KeyNotFoundError) {
-        // read from chain
-        let searchEngineAccount = new SearchEngineAccount(new Account(), "test_" + randomInt(10000), new TrustTable([]));
-        // store in cache
-        this.store.put(searchEngineAccount.account.publicKey.toBase58(), searchEngineAccount)
-        return searchEngineAccount;
-      }
-      throw error;
-    }
-  }
-
-  async registerResource(resource: Resource): Promise<void> {
-    let resourceList = await this.listResources(new Location(""));
-    resourceList.push(resource);
-    this.store.put(this.RESOURCES_KEY, resourceList);
-  }
-
-  async listResources(location: Location): Promise<Resource[]> {
-    let resourceList = await this.store.get(this.RESOURCES_KEY)
-    if (!resourceList) {
-      this.store.put(this.RESOURCES_KEY, []);
-      return [];
-    }
-    if (!(resourceList instanceof Array)) {
-      throw new WrongInstanceError();
-    }
-    return resourceList;
-  }
-
-  async recordIntent(account: SearchEngineAccount, resource: PublicKey): Promise<void> {
-    let intentsList = await this.listIntents(account);
-    intentsList.push(resource);
-    this.store.put(this.INTENTS_KEY, intentsList);
-  }
-
-  async listIntents(account: SearchEngineAccount): Promise<Array<PublicKey>> {
-    let intentsList = await this.store.get(this.INTENTS_KEY)
-    if (!intentsList) {
-      this.store.put(this.INTENTS_KEY, []);
-      return [];
-    }
-    if (!(intentsList instanceof Array)) {
-      throw new WrongInstanceError();
-    }
-    return intentsList;
   }
 }

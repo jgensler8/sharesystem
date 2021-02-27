@@ -23,9 +23,21 @@ fn _process_instruction(
             // TODO check accounts length 1 and first account is signer
             let account = account.try_to_vec().unwrap();
             info!("borrowing data");
-            let mut account_data = accounts[0].data.borrow_mut();
-            info!("copying");
-            account_data.copy_from_slice(&account);
+            accounts[0].key.log();
+            let result = accounts[0].try_borrow_mut_data();
+            match result {
+                Ok(mut account_data) => {
+                    info!("copying");
+                    info!(&account_data.len().to_string());
+                    info!(&account.len().to_string());
+                    account_data[..account.len()].copy_from_slice(&account);
+                }
+                Err(err) => {
+                    info!("failed to borrow mutable data");
+                    info!(&err.to_string())
+                }
+            }
+            // let mut account_data = accounts[0].data.borrow_mut();
             info!("done!");
             // account_data.copy_within(&account, account.len());
         }
