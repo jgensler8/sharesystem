@@ -1,5 +1,5 @@
 import { Connection, PublicKey, Account } from '@solana/web3.js';
-import { TrustTableEntry, MAX_TRUST_TABLE_SIZE } from './lib-types';
+import { MAX_TRUST_TABLE_SIZE, TrustTableEntry } from './lib-types';
 import { SearchEngineAPI } from './lib';
 import { establishConnection, loadSearchEngineAddressFromEnvironment, loadAccountFromEnvironment, Store, KeyNotFoundError } from './util'
 
@@ -40,15 +40,15 @@ describe('serach engine', () => {
     expect(createdAccount).toStrictEqual(detailsAccount);
   });
 
-  // test('can read trust table', async () => {
-  //   // assumes account created already
-  //   let defaultAccount = await system.getDefaultSearchEngineAccount();
-  //   let entries = Array(MAX_TRUST_TABLE_SIZE).fill(new TrustTableEntry(new PublicKey("FFAAFFAAFFAABBCCAABBCCDDEEFFaabbccAABBCCDDEE"), 10));
-  //   defaultAccount.trustTable = entries;
-  //   await system.updateSearchEngineAccount(searchEnginePayerAccount, defaultAccount);
+  test('can read trust table', async () => {
+    // assumes account created already
+    let defaultAccount = await system.getDefaultSearchEngineAccount();
+    let entries = Array(MAX_TRUST_TABLE_SIZE).fill(new TrustTableEntry(new PublicKey("FFAAFFAAFFAABBCCAABBCCDDEEFFaabbccAABBCCDDEE"), 10));
+    defaultAccount.trustTable = entries;
+    await system.updateSearchEngineAccount(searchEnginePayerAccount, defaultAccount);
 
-  //   let storedAccount = await system.getAccountDetails(searchEnginePayerAccount.publicKey);
-  //   expect(defaultAccount).toStrictEqual(storedAccount);
-  // })
+    let storedAccount = await system.getAccountDetails(searchEnginePayerAccount.publicKey);
+    expect(defaultAccount).toStrictEqual(storedAccount);
+  })
 
 })

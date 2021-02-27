@@ -1,12 +1,8 @@
 
-import {
-    Account,
-    Connection, PublicKey,
-} from '@solana/web3.js';
-
 import React from 'react';
-import { sys } from 'typescript';
 import {SearchEngineAPI} from '../lib/lib';
+import {ISearchEngine} from '../lib/lib-types';
+import { MockSearchEngineAPI } from '../lib/lib-mock';
 import {establishConnection, loadSearchEngineAddressFromEnvironment, loadAccountFromEnvironment, Store} from '../lib/util';
 
 type SolanaConnectionProps = {
@@ -16,7 +12,7 @@ type SolanaConnectionProps = {
 export type SolanaConnectionState = {
     loading: boolean,
     error?: Error,
-    system?: SearchEngineAPI,
+    system?: ISearchEngine,
 }
 
 export class SolanaConnection extends React.Component<SolanaConnectionProps, SolanaConnectionState> {
@@ -30,10 +26,16 @@ export class SolanaConnection extends React.Component<SolanaConnectionProps, Sol
     }
 
     async loadEverything(): Promise<SolanaConnectionState> {
-        let searchEngineProgramId = await loadSearchEngineAddressFromEnvironment()
-        let connection = await establishConnection()
-        let payerAccount = await loadAccountFromEnvironment()
-        let system = new SearchEngineAPI(connection, searchEngineProgramId, new Store(), payerAccount);
+        const useMock = true;
+        let system: ISearchEngine;
+        if(useMock) {
+            system = new MockSearchEngineAPI(new Store());
+        } else {
+            let searchEngineProgramId = await loadSearchEngineAddressFromEnvironment()
+            let connection = await establishConnection()
+            let payerAccount = await loadAccountFromEnvironment()
+            system = new SearchEngineAPI(connection, searchEngineProgramId, new Store(), payerAccount);    
+        }
         return {...this.state, system: system, loading: false}
     }
 

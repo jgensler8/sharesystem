@@ -1,10 +1,7 @@
 import {
   Account,
   Connection,
-  BpfLoader,
-  BPF_LOADER_PROGRAM_ID,
   PublicKey,
-  LAMPORTS_PER_SOL,
   SystemProgram,
   TransactionInstruction,
   Transaction,
