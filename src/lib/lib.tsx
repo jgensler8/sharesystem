@@ -11,7 +11,7 @@ import {
   sendAndConfirmTransaction,
 } from '@solana/web3.js';
 import { Store, WrongInstanceError, KeyNotFoundError } from './util';
-import { IResourceAPI, ISearchEngine, Resource, ResourceInstance, Challenege, SearchEngineAccount, Location } from './lib-types';
+import { IResourceAPI, ISearchEngine, ChallengeTable, Resource, ResourceInstance, Challenege, SearchEngineAccount, Location } from './lib-types';
 import { toBorsh, toTyped } from './lib-serialization';
 
 

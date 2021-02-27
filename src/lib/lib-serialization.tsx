@@ -1,3 +1,8 @@
+// @ts-nocheck
+// no-check needed for:
+// * BorshConstructable constructor
+// * [...] spread syntax
+
 import { PublicKey } from "@solana/web3.js";
 import { TextEncoder, TextDecoder } from "web-encoding";
 import { DEFAULT_TRUST_TABLE_ENTRY, MAX_TRUST_TABLE_SIZE, SearchEngineAccount, TrustTableEntry } from "./lib-types";
@@ -31,7 +36,7 @@ AllBorshSchemas.set(BorshSearchEngineAccount, {
     ]
 })
 
-function toBorsh(libObject: Object): Uint8Array {
+function toBorsh(libObject: any): Uint8Array {
     if (libObject instanceof TrustTableEntry) {
         return serialize(AllBorshSchemas,
             new BorshTrustTableEntry({
@@ -41,7 +46,7 @@ function toBorsh(libObject: Object): Uint8Array {
         );
     } else if (libObject instanceof SearchEngineAccount) {
         let name = new Uint8Array(12);
-        let encoder = new TextEncoder("utf-8");
+        let encoder = new TextEncoder();
         let nameSlice = encoder.encode(libObject.friendlyName).slice(0, 12);
         name.set(nameSlice);
 
@@ -70,7 +75,7 @@ function toBorsh(libObject: Object): Uint8Array {
     }
 }
 
-function toTyped(t: any, borshBuffer: Buffer): Object {
+function toTyped(t: any, borshBuffer: Buffer): any {
     if (t == TrustTableEntry) {
         let deserialized = deserialize(AllBorshSchemas, BorshTrustTableEntry, borshBuffer)
         return new TrustTableEntry(new PublicKey(deserialized.id), deserialized.value);

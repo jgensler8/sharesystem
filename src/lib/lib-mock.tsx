@@ -20,7 +20,7 @@ export class MockSearchEngineAPI implements ISearchEngine {
     async healthCheck(): Promise<void> { }
 
     async createDefaultSearchEngineAccount(account: Account, friendlyName: string): Promise<SearchEngineAccount> {
-        let searchEngineAccount = new SearchEngineAccount(new Account(), friendlyName, []);
+        let searchEngineAccount = new SearchEngineAccount(friendlyName, []);
         this.store.put(this.ACCOUNT_KEY, searchEngineAccount)
         return searchEngineAccount;
     }

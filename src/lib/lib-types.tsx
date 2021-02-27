@@ -65,7 +65,7 @@ export class SearchEngineAccount {
   friendlyName: string;
   trustTable: Array<TrustTableEntry>;
 
-  constructor(friendlyName: string, trustTable: List<TrustTableEntry>) {
+  constructor(friendlyName: string, trustTable: Array<TrustTableEntry>) {
     this.friendlyName = friendlyName;
     this.trustTable = trustTable
   }
