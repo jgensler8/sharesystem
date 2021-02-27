@@ -49,7 +49,7 @@ export async function loadResourceAddressFromEnvironment(): Promise<PublicKey> {
   return new Account().publicKey;
 }
 export async function loadAccountFromEnvironment(): Promise<Account> {
-  if(privateKey){
+  if(privateKey.length){
     return new Account(Uint8Array.from(privateKey));
   }
   return new Account();
