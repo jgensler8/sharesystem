@@ -1,68 +1,15 @@
-use crate::constants::{
-    MAX_TRUST_TABLE_SIZE,
+use crate::types::{
     INSTRUCTION_DEFAULT,
     INSTRUCTION_UPDATE_ACCOUNT,
     INSTRUCTION_REGISTER_RESOURCE,
     INSTRUCTION_REGISTER_INTENT,
+    SearchEngineAccount,
+    Resource,
 };
 use crate::error::SearchEngineError::InvalidInstruction;
-use borsh::{BorshDeserialize, BorshSerialize};
+use borsh::{BorshDeserialize};
 use solana_program::{program_error::ProgramError};
 use std::mem::size_of;
-
-/*
-Search Engine
-fields
-* resources Map<Location, Resource>
-operations
-* register_resource(accounts:[owner, program], data:None)
-  auth: accounts[0].is_signer == true and accounts[1].owner ==  accounts[0]
-* list_resources(accounts:[], data:Location)
-  auth: none
-* update_trust_table(accounts:[owner], data:TrustTable)
-  auth: searchengine_id == accounts[0].owner and accounts[0].is_signer == true
-* get_trust_table(accounts:[owner], data:None)
-  auth: none
-* register_intent(accounts:[owner, program], data:None)
-  auth: searchengine_id == accounts[0].owner and accounts[0].is_signer == true
-* list_intents(accounts[search], data:None)
-  auth: none
-*/
-
-#[repr(C)]
-#[derive(BorshSerialize, BorshDeserialize, Clone, Copy, PartialEq, Debug, Default)]
-pub struct TrustTableEntry {
-    pub to: [u8; 32],
-    pub value: u8,
-}
-
-#[repr(C)]
-#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq)]
-pub struct TrustTable {
-    pub entries: [TrustTableEntry; MAX_TRUST_TABLE_SIZE],
-}
-
-#[repr(C)]
-#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq)]
-pub struct SearchEngineAccount {
-    pub friendly_name: [u8; 12],
-    pub trust_table: TrustTable,
-}
-
-#[repr(C)]
-#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq)]
-pub struct Location {
-    pub zip: String,
-}
-
-#[repr(C)]
-#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq)]
-pub struct Resource {
-    pub address: [u8; 32],
-    pub name: String,
-    pub location: Location,
-    pub trust_threshold: f32,
-}
 
 #[repr(C)]
 #[derive(Debug, PartialEq)]
@@ -123,6 +70,13 @@ mod test {
     use super::*;
     use solana_program::pubkey::Pubkey;
     use borsh::BorshSerialize;
+    use crate::types::{
+        TrustTableEntry,
+        Location,
+        MAX_TRUST_TABLE_SIZE,
+        MAX_FRIENDLY_NAME_SIZE,
+        MAX_ZIP_SIZE,
+    };
 
     #[test]
     fn test_empty_input() {
@@ -147,36 +101,20 @@ mod test {
     }
 
     #[test]
-    fn test_pack_trusttable() {
-        // pack
-        let entries = [TrustTableEntry {
-            to: Pubkey::new_unique().to_bytes(),
-            value: 10,
-        }; MAX_TRUST_TABLE_SIZE];
-        let trust_table = TrustTable { entries: entries };
-        let packed = trust_table.try_to_vec().unwrap();
-        // unpack
-        let decoded = TrustTable::try_from_slice(&packed).unwrap();
-        assert_eq!(trust_table, decoded);
-    }
-
-    #[test]
     fn test_upack_update_account() {
         let mut data = Vec::<u8>::new();
         data.push(1);
         let name_str = String::from("jeff");
-        let mut name = [0u8; 12];
+        let mut name = [0u8; MAX_FRIENDLY_NAME_SIZE];
         for (place, data) in name.iter_mut().zip(name_str.as_bytes().iter()) {
             *place = *data
         }
         let search_engine_account = SearchEngineAccount {
             friendly_name: name,
-            trust_table: TrustTable {
-                entries: [TrustTableEntry {
-                    to: Pubkey::new_unique().to_bytes(),
-                    value: 10,
-                }; MAX_TRUST_TABLE_SIZE],
-            },
+            trust_table: [TrustTableEntry {
+                to: Pubkey::new_unique().to_bytes(),
+                value: 10,
+            }; MAX_TRUST_TABLE_SIZE],
         };
         data.append(&mut search_engine_account.try_to_vec().unwrap());
 
@@ -189,13 +127,23 @@ mod test {
     fn test_unpack_register_resource() {
         let mut data = Vec::new();
         data.push(2);
+        let name_str = String::from("jeff");
+        let mut name = [0u8; MAX_FRIENDLY_NAME_SIZE];
+        for (place, data) in name.iter_mut().zip(name_str.as_bytes().iter()) {
+            *place = *data
+        }
+        let zip_str = String::from("12345");
+        let mut zip = [0u8; MAX_ZIP_SIZE];
+        for (place, data) in zip.iter_mut().zip(zip_str.as_bytes().iter()) {
+            *place = *data
+        }
         let resource = Resource {
             address: Pubkey::new_unique().to_bytes(),
             location: Location {
-                zip: String::from("12345"),
+                zip: zip,
             },
-            name: String::from("test"),
-            trust_threshold: 0.0,
+            name: name,
+            trust_threshold: 10,
         };
         data.append(&mut resource.try_to_vec().unwrap());
 
@@ -208,13 +156,23 @@ mod test {
     fn test_unpack_register_intent() {
         let mut data = Vec::new();
         data.push(3);
+        let name_str = String::from("jeff");
+        let mut name = [0u8; MAX_FRIENDLY_NAME_SIZE];
+        for (place, data) in name.iter_mut().zip(name_str.as_bytes().iter()) {
+            *place = *data
+        }
+        let zip_str = String::from("12345");
+        let mut zip = [0u8; MAX_ZIP_SIZE];
+        for (place, data) in zip.iter_mut().zip(zip_str.as_bytes().iter()) {
+            *place = *data
+        }
         let resource = Resource {
             address: Pubkey::new_unique().to_bytes(),
             location: Location {
-                zip: String::from("12345"),
+                zip: zip,
             },
-            name: String::from("test"),
-            trust_threshold: 0.0,
+            name: name,
+            trust_threshold: 10,
         };
         data.append(&mut resource.try_to_vec().unwrap());
 

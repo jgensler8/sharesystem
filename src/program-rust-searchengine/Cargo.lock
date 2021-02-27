@@ -501,7 +501,6 @@ name = "solana-bpf-searchengine"
 version = "0.0.1"
 dependencies = [
  "borsh",
- "byteorder",
  "num-derive",
  "num-traits",
  "solana-program",
