@@ -16,6 +16,7 @@ use crate::{
     error::ResourceError::{
         NoResourceInstanceSpace,
         ResourceInDistribution,
+        ResourceNotInDistribution,
     },
     types::{
         PUBLIC_KEY_SIZE,
@@ -82,12 +83,47 @@ fn _process_instruction(
             }
             resource_database.final_quantity = final_quantity;
 
-            // save data again
+            // save data
             database_account_data.copy_from_slice(&resource_database.try_to_vec().unwrap());
             return Ok(())
         }
-        ResourceInstruction::ApproveChallenge(_challenge) => {
-            info!("would approce challenge");
+        ResourceInstruction::RecordChallenge(challenge) => {
+            info!("approving challenge");
+            let mut database_account_data = accounts[0].try_borrow_mut_data().unwrap();
+            let mut resource_database =  ResourceDatabase::try_from_slice(&database_account_data).unwrap();
+
+            // nothing to do, already in distribution
+            if !resource_database.is_distributed {
+                return Err(ProgramError::from(ResourceNotInDistribution))
+            }
+
+            // TODO data validation
+            let empty_address = [0u8; PUBLIC_KEY_SIZE];
+            if challenge.from == empty_address || challenge.to == empty_address {
+                return Err(ProgramError::InvalidInstructionData)
+            }
+
+            let mut found = false;
+            for existing_challenge in resource_database.challenges.iter_mut() {
+                if existing_challenge.from == challenge.from && existing_challenge.to == challenge.to {
+                    *existing_challenge = challenge;
+                    found = true;
+                    break;
+                }
+                if existing_challenge.from == empty_address {
+                    *existing_challenge = challenge;
+                    found = true;
+                    break
+                }
+            }
+            // TODO (I think we can filter out errors based on allowed addresses in the intents)
+            if !found {
+                return Err(ProgramError::InvalidInstructionData)
+            }
+
+            // save data
+            database_account_data.copy_from_slice(&resource_database.try_to_vec().unwrap());
+            return Ok(())
         }
         ResourceInstruction::ClaimChallenge(_challenge) => {
             info!("would claim challenge");
@@ -125,6 +161,7 @@ mod test {
         types::{
             INSTRUCTION_RECORD_RESOURCE_INSTANCE,
             INSTRUCTION_INITIATE_DISTRIBUTION,
+            INSTRUCTION_RECORD_CHALLENGE,
             MAX_NUM_RESOURCE_INSTANCES,
             MAX_NUM_RECIPIENTS,
             MAX_NUM_CHALLENGES,
@@ -268,5 +305,58 @@ mod test {
         let resource_database = ResourceDatabase::try_from_slice(&data).unwrap();
         assert_eq!(resource_database.is_distributed, true);
         assert_eq!(resource_database.final_quantity, resource_instance.quantity);
+    }
+
+    #[test]
+    fn test_approve_challenge() {
+        let program_id = Pubkey::default();
+        let key = Pubkey::default();
+        let mut lamports = 0;
+        let mut data = vec![0u8; 1302];
+
+        let resource_database = ResourceDatabase {
+            // set to true so we don't need a bunch of other setup
+            is_distributed: true,
+            final_quantity: 0,
+            instances: [ResourceInstance{
+                from: [0u8; PUBLIC_KEY_SIZE],
+                quantity: 0,
+            }; MAX_NUM_RESOURCE_INSTANCES],
+            challenges: [Challenge{
+                from: [0u8; PUBLIC_KEY_SIZE],
+                to: [0u8; PUBLIC_KEY_SIZE],
+                value: false,
+            }; MAX_NUM_CHALLENGES],
+            claims: [[0u8; PUBLIC_KEY_SIZE]; MAX_NUM_RECIPIENTS],
+        };
+        data.copy_from_slice(&resource_database.try_to_vec().unwrap());
+
+        let owner = Pubkey::default();
+        let account = AccountInfo::new(
+            &key,
+            false,
+            true,
+            &mut lamports,
+            &mut data,
+            &owner,
+            false,
+            Epoch::default(),
+        );
+        let accounts = vec![account];
+
+        let mut instruction_data: Vec<u8> = Vec::new();
+        instruction_data.push(INSTRUCTION_RECORD_CHALLENGE);
+        let challenge = Challenge {
+            from: Pubkey::new_unique().to_bytes(),
+            to: Pubkey::new_unique().to_bytes(),
+            value: true,
+        };
+        instruction_data.append(&mut challenge.try_to_vec().unwrap());
+        let result = process_instruction(&program_id, &accounts, &instruction_data);
+        assert_eq!(result.unwrap(), ());
+        let resource_database = ResourceDatabase::try_from_slice(&data).unwrap();
+        assert_eq!(resource_database.challenges[0].from, challenge.from);
+        assert_eq!(resource_database.challenges[0].to, challenge.to);
+        assert_eq!(resource_database.challenges[0].value, true);
     }
 }

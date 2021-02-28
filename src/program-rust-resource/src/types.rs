@@ -5,7 +5,7 @@ pub const PUBLIC_KEY_SIZE: usize = 32;
 pub const INSTRUCTION_DEFAULT: u8 = 0;
 pub const INSTRUCTION_RECORD_RESOURCE_INSTANCE: u8 = 1;
 pub const INSTRUCTION_INITIATE_DISTRIBUTION: u8 = 2;
-pub const INSTRUCTION_APPROVE_CHALLENGE: u8 = 3;
+pub const INSTRUCTION_RECORD_CHALLENGE: u8 = 3;
 pub const INSTRUCTION_CLAIM_CHALLENGE: u8 = 4;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Copy, PartialEq, Debug, Default)]

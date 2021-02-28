@@ -2,7 +2,7 @@ use crate::types::{
     INSTRUCTION_DEFAULT,
     INSTRUCTION_RECORD_RESOURCE_INSTANCE,
     INSTRUCTION_INITIATE_DISTRIBUTION,
-    INSTRUCTION_APPROVE_CHALLENGE,
+    INSTRUCTION_RECORD_CHALLENGE,
     INSTRUCTION_CLAIM_CHALLENGE,
     ResourceInstance,
     Challenge,
@@ -18,7 +18,7 @@ pub enum ResourceInstruction {
     Default(),
     RecordResourceInstance(ResourceInstance),
     InitiateDistribution(),
-    ApproveChallenge(Challenge),
+    RecordChallenge(Challenge),
     ClaimChallenge(Challenge)
 }
 
@@ -40,9 +40,9 @@ impl ResourceInstruction {
             INSTRUCTION_INITIATE_DISTRIBUTION => {
                 Self::InitiateDistribution()
             }
-            INSTRUCTION_APPROVE_CHALLENGE => {
+            INSTRUCTION_RECORD_CHALLENGE => {
                 match Challenge::try_from_slice(_rest) {
-                    Ok(challenge) => Self::ApproveChallenge(challenge),
+                    Ok(challenge) => Self::RecordChallenge(challenge),
                     Err(_err) => {
                         return Err(ProgramError::InvalidInstructionData)
                     }
@@ -114,7 +114,7 @@ mod test {
     #[test]
     fn test_approve_challenge() {
         let mut data = Vec::<u8>::new();
-        data.push(INSTRUCTION_APPROVE_CHALLENGE);
+        data.push(INSTRUCTION_RECORD_CHALLENGE);
         let challenge = Challenge {
             from: Pubkey::new_unique().to_bytes(),
             to: Pubkey::new_unique().to_bytes(),
@@ -123,7 +123,7 @@ mod test {
         data.append(&mut challenge.try_to_vec().unwrap());
 
         let result = ResourceInstruction::unpack(&data).unwrap();
-        let expected = ResourceInstruction::ApproveChallenge(challenge);
+        let expected = ResourceInstruction::RecordChallenge(challenge);
         assert_eq!(expected, result);
     }
 

@@ -19,6 +19,9 @@ pub enum ResourceError {
     /// but the Resource is being distributed and can't be modified
     #[error("ResourceInstance is being distributed")]
     ResourceInDistribution,
+
+    #[error("ResourceInstance not being distributed")]
+    ResourceNotInDistribution,
 }
 impl From<ResourceError> for ProgramError {
     fn from(e: ResourceError) -> Self {
