@@ -13,7 +13,10 @@ pub enum ResourceError {
     #[error("No ResourceInstance Space")]
     NoResourceInstanceSpace,
 
-    /// Someone is trying to record a resource instance but the Resource is being distributed
+    /// Someone is trying to either:
+    /// * record a resource instance
+    /// * re-initiate a resource distribution
+    /// but the Resource is being distributed and can't be modified
     #[error("ResourceInstance is being distributed")]
     ResourceInDistribution,
 }

@@ -52,8 +52,39 @@ fn _process_instruction(
             }
             return Err(ProgramError::from(NoResourceInstanceSpace));
         }
-        ResourceInstruction::InitiateDistribution(_resource) => {
-            info!("would initiate distribution");
+        ResourceInstruction::InitiateDistribution() => {
+            info!("initiating distribution");
+            let mut database_account_data = accounts[0].try_borrow_mut_data().unwrap();
+            let mut resource_database =  ResourceDatabase::try_from_slice(&database_account_data).unwrap();
+
+            // nothing to do, already in distribution
+            if resource_database.is_distributed {
+                return Err(ProgramError::from(ResourceInDistribution))
+            }
+
+            // flip state so that challenges can be accepted
+            resource_database.is_distributed = true;
+
+            // calculate distribution
+            let mut quantity_sum = 0;
+            let mut quantity_count = 0;
+            let empty_address = [0u8; PUBLIC_KEY_SIZE];
+            for instance in resource_database.instances.iter() {
+                if instance.from == empty_address {
+                    break;
+                }
+                quantity_sum += instance.quantity;
+                quantity_count += 1;
+            }
+            let mut final_quantity = 0;
+            if quantity_sum > 0 {
+                final_quantity = quantity_sum / quantity_count;
+            }
+            resource_database.final_quantity = final_quantity;
+
+            // save data again
+            database_account_data.copy_from_slice(&resource_database.try_to_vec().unwrap());
+            return Ok(())
         }
         ResourceInstruction::ApproveChallenge(_challenge) => {
             info!("would approce challenge");
@@ -93,6 +124,7 @@ mod test {
         error::ResourceError,
         types::{
             INSTRUCTION_RECORD_RESOURCE_INSTANCE,
+            INSTRUCTION_INITIATE_DISTRIBUTION,
             MAX_NUM_RESOURCE_INSTANCES,
             MAX_NUM_RECIPIENTS,
             MAX_NUM_CHALLENGES,
@@ -179,5 +211,62 @@ mod test {
         assert_eq!(result.unwrap(), ());
         let resource_database = ResourceDatabase::try_from_slice(&data).unwrap();
         assert_eq!(resource_database.instances[0].from, resource_instance.from);
+    }
+
+    #[test]
+    fn test_initiate_resource_distribution() {
+        let program_id = Pubkey::default();
+        let key = Pubkey::default();
+        let mut lamports = 0;
+        let mut data = vec![0u8; 1302];
+
+        let resource_database = ResourceDatabase {
+            is_distributed: false,
+            final_quantity: 0,
+            instances: [ResourceInstance{
+                from: [0u8; PUBLIC_KEY_SIZE],
+                quantity: 0,
+            }; MAX_NUM_RESOURCE_INSTANCES],
+            challenges: [Challenge{
+                from: [0u8; PUBLIC_KEY_SIZE],
+                to: [0u8; PUBLIC_KEY_SIZE],
+                value: false,
+            }; MAX_NUM_CHALLENGES],
+            claims: [[0u8; PUBLIC_KEY_SIZE]; MAX_NUM_RECIPIENTS],
+        };
+        data.copy_from_slice(&resource_database.try_to_vec().unwrap());
+
+        let owner = Pubkey::default();
+        let account = AccountInfo::new(
+            &key,
+            false,
+            true,
+            &mut lamports,
+            &mut data,
+            &owner,
+            false,
+            Epoch::default(),
+        );
+        let accounts = vec![account];
+
+        // add a resource ...
+        let mut record_resource_instance_instruction_data: Vec<u8> = Vec::new();
+        record_resource_instance_instruction_data.push(INSTRUCTION_RECORD_RESOURCE_INSTANCE);
+        let resource_instance = ResourceInstance {
+            from:  Pubkey::new_unique().to_bytes(),
+            quantity: 5,
+        };
+        record_resource_instance_instruction_data.append(&mut resource_instance.try_to_vec().unwrap());
+        let _result = process_instruction(&program_id, &accounts, &record_resource_instance_instruction_data);
+
+        // ... then initiate distribution
+        let mut instruction_data: Vec<u8> = Vec::new();
+        instruction_data.push(INSTRUCTION_INITIATE_DISTRIBUTION);
+
+        let result = process_instruction(&program_id, &accounts, &instruction_data);
+        assert_eq!(result.unwrap(), ());
+        let resource_database = ResourceDatabase::try_from_slice(&data).unwrap();
+        assert_eq!(resource_database.is_distributed, true);
+        assert_eq!(resource_database.final_quantity, resource_instance.quantity);
     }
 }

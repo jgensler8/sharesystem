@@ -5,7 +5,6 @@ use crate::types::{
     INSTRUCTION_APPROVE_CHALLENGE,
     INSTRUCTION_CLAIM_CHALLENGE,
     ResourceInstance,
-    Resource,
     Challenge,
 };
 use crate::error::ResourceError::InvalidInstruction;
@@ -18,7 +17,7 @@ use std::mem::size_of;
 pub enum ResourceInstruction {
     Default(),
     RecordResourceInstance(ResourceInstance),
-    InitiateDistribution(Resource),
+    InitiateDistribution(),
     ApproveChallenge(Challenge),
     ClaimChallenge(Challenge)
 }
@@ -39,12 +38,7 @@ impl ResourceInstruction {
                 }
             }
             INSTRUCTION_INITIATE_DISTRIBUTION => {
-                match Resource::try_from_slice(_rest) {
-                    Ok(resource) => Self::InitiateDistribution(resource),
-                    Err(_err) => {
-                        return Err(ProgramError::InvalidInstructionData)
-                    }
-                }
+                Self::InitiateDistribution()
             }
             INSTRUCTION_APPROVE_CHALLENGE => {
                 match Challenge::try_from_slice(_rest) {
@@ -81,11 +75,6 @@ mod test {
     use super::*;
     use borsh::BorshSerialize;
     use solana_program::{pubkey::Pubkey};
-    use crate::types::{
-        Location,
-        MAX_FRIENDLY_NAME_SIZE,
-        MAX_ZIP_SIZE,
-    };
 
     #[test]
     fn test_empty_input() {
@@ -116,28 +105,9 @@ mod test {
     fn test_initiate_distribution() {
         let mut data = Vec::<u8>::new();
         data.push(INSTRUCTION_INITIATE_DISTRIBUTION);
-        let name_str = String::from("jeff");
-        let mut name = [0u8; MAX_FRIENDLY_NAME_SIZE];
-        for (place, data) in name.iter_mut().zip(name_str.as_bytes().iter()) {
-            *place = *data
-        }
-        let zip_str = String::from("12345");
-        let mut zip = [0u8; MAX_ZIP_SIZE];
-        for (place, data) in zip.iter_mut().zip(zip_str.as_bytes().iter()) {
-            *place = *data
-        }
-        let resource = Resource {
-            address: Pubkey::new_unique().to_bytes(),
-            location: Location {
-                zip,
-            },
-            name: name,
-            trust_threshold: 4,
-        };
-        data.append(&mut resource.try_to_vec().unwrap());
 
         let result = ResourceInstruction::unpack(&data).unwrap();
-        let expected = ResourceInstruction::InitiateDistribution(resource);
+        let expected = ResourceInstruction::InitiateDistribution();
         assert_eq!(expected, result);
     }
 
