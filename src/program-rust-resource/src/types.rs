@@ -53,10 +53,28 @@ pub struct ResourceIndex {
     pub buckets: [ResourceBucket; MAX_INDEX_BUCKETS],
 }
 
-#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq)]
+#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq, Default, Copy)]
 pub struct Challenge {
+    pub from: [u8; PUBLIC_KEY_SIZE],
+    pub to: [u8; PUBLIC_KEY_SIZE],
+    pub value: bool,
 }
 
-#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq)]
+#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq, Default, Copy)]
 pub struct ResourceInstance {
+    pub from: [u8; PUBLIC_KEY_SIZE],
+    pub quantity: u8,
+}
+
+pub const MAX_NUM_RECIPIENTS: usize = 4;
+pub const MAX_NUM_RESOURCE_INSTANCES: usize = MAX_NUM_RECIPIENTS;
+pub const MAX_NUM_CHALLENGES: usize = MAX_NUM_RECIPIENTS * MAX_NUM_RECIPIENTS;
+
+#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq)]
+pub struct ResourceDatabase {
+    pub is_distributed: bool,
+    pub final_instance: ResourceInstance,
+    pub instances: [ResourceInstance; MAX_NUM_RESOURCE_INSTANCES],
+    pub challenge: [Challenge; MAX_NUM_CHALLENGES],
+    pub claims: [[u8; PUBLIC_KEY_SIZE]; MAX_NUM_RECIPIENTS]
 }

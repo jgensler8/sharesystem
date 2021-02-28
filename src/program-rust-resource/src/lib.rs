@@ -21,7 +21,7 @@ fn _process_instruction(
         ResourceInstruction::Default() => {
             info!("OK")
         }
-        ResourceInstruction::RecordResourceInstance(_account) => {
+        ResourceInstruction::RecordResourceInstance(_resource_instance) => {
             info!("would record resource instance");
         }
         ResourceInstruction::InitiateDistribution(_resource) => {
