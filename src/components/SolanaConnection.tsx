@@ -3,7 +3,7 @@ import React from 'react';
 import {SearchEngineAPI} from '../lib/lib';
 import {ISearchEngine} from '../lib/lib-types';
 import { MockSearchEngineAPI } from '../lib/lib-mock';
-import {establishConnection, loadSearchEngineAddressFromEnvironment, loadAccountFromEnvironment, Store} from '../lib/util';
+import {establishConnection, loadSearchEngineAddressFromEnvironment, loadAccountFromEnvironment, Store, loadDatabaseAddressFromEnvironment} from '../lib/util';
 
 type SolanaConnectionProps = {
     render(state: SolanaConnectionState): JSX.Element
@@ -34,7 +34,8 @@ export class SolanaConnection extends React.Component<SolanaConnectionProps, Sol
             let searchEngineProgramId = await loadSearchEngineAddressFromEnvironment()
             let connection = await establishConnection()
             let payerAccount = await loadAccountFromEnvironment()
-            system = new SearchEngineAPI(connection, searchEngineProgramId, new Store(), payerAccount);    
+            let databaseAccount = await loadDatabaseAddressFromEnvironment();
+            system = new SearchEngineAPI(connection, searchEngineProgramId, databaseAccount.publicKey, new Store(), payerAccount);    
         }
         return {...this.state, system: system, loading: false}
     }

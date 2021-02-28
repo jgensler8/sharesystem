@@ -2,7 +2,7 @@ import {
     Account,
     PublicKey,
 } from '@solana/web3.js';
-import { ISearchEngine, SearchEngineAccount, Resource, Location } from './lib-types';
+import { ISearchEngine, SearchEngineAccount, Resource, Location, ResourceInstance, ResourceIndex } from './lib-types';
 import { randomInt } from 'mz/crypto';
 import { Store, WrongInstanceError, KeyNotFoundError } from './util';
 
@@ -64,6 +64,10 @@ export class MockSearchEngineAPI implements ISearchEngine {
         let resourceList = await this.listResources(new Location(""));
         resourceList.push(resource);
         this.store.put(this.RESOURCES_KEY, resourceList);
+    }
+
+    async getResourceIndex(): Promise<ResourceIndex> {
+        return new ResourceIndex(new Map());
     }
 
     async listResources(location: Location): Promise<Resource[]> {
