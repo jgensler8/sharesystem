@@ -8,6 +8,14 @@ pub enum SearchEngineError {
     /// Invalid instruction number passed in.
     #[error("Invalid instruction")]
     InvalidInstruction,
+
+    /// Database is full of data an needs to be resized
+    #[error("Database full")]
+    DatabaseFull,
+
+    /// Database bucket can't hold any more addresses
+    #[error("Bucket full")]
+    BucketFull,
 }
 impl From<SearchEngineError> for ProgramError {
     fn from(e: SearchEngineError) -> Self {

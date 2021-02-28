@@ -49,7 +49,7 @@
     "test:unit": "react-scripts test --testMatch '**/!(*.integration).test.tsx'",
     "test:integration": "react-scripts test --testMatch '**/*.integration.test.tsx'",
     "eject": "react-scripts eject",
-    "bootstrap:fake-deploy": "echo '{}' > ./src/lib/resource_deploy.out.json && echo '{}' > ./src/lib/searchengine_deploy.out.json && echo '[]' > ./src/lib/keygen.out.json",
+    "bootstrap:fake-deploy": "echo '{}' > ./src/lib/resource_deploy.out.json && echo '{}' > ./src/lib/searchengine_deploy.out.json && echo '{}' > ./src/lib/searchengine_database_deploy.out.json && echo '[]' > ./src/lib/keygen.out.json && echo '[]' > ./src/lib/searchengine_database_keygen.out.json",
     "bootstrap:ts": "echo 'not working due to react typescript and ts-node imcompatible tsconfig.json' && ts-node src/lib/bootstrap.tsx",
     "bootstrap:shell": "npm run bootstrap:shell:account && npm run bootstrap:shell:airdrop",
     "bootstrap:shell:account": "solana-keygen new --no-passphrase --outfile ./src/lib/keygen.out.json",
@@ -64,7 +64,12 @@
     "clean:program-rust:searchengine": "cargo clean --manifest-path=./src/program-rust-searchengine/Cargo.toml && rm -rf ./dist && npm run clean:store",
     "test:program-rust:searchengine": "cargo test-bpf --manifest-path=./src/program-rust-searchengine/Cargo.toml",
     "watch:program-rust:searchengine": "cd src/program-rust-searchengine && RUST_BACKTRACE=1 cargo watch --clear --exec test",
-    "deploy:program-rust:searchengine": "solana --url localhost --config ./src/lib/keygen.out.json program deploy dist/program/solana_bpf_searchengine.so > src/lib/searchengine_deploy.out.json"
+    "deploy:program-rust:searchengine": "solana --url localhost --config ./src/lib/keygen.out.json program deploy dist/program/solana_bpf_searchengine.so > src/lib/searchengine_deploy.out.json && cat src/lib/searchengine_deploy.out.json | jq '.programId' > src/lib/searchengine_deploy_raw.out.json",
+    "build:program-rust:bootstrap": "cargo build --manifest-path=./src/program-rust-bootstrap/Cargo.toml && npm run clean:store",
+    "clean:program-rust:bootstrap": "cargo clean --manifest-path=./src/program-rust-bootstrap/Cargo.toml && rm -rf ./dist && npm run clean:bootstrap",
+    "test:program-rust:bootstrap": "cargo test --manifest-path=./src/program-rust-bootstrap/Cargo.toml",
+    "run:program-rust:bootstrap": "cargo run --manifest-path=./src/program-rust-bootstrap/Cargo.toml",
+    "watch:program-rust:bootstrap": "cd src/program-rust-bootstrap && RUST_BACKTRACE=1 cargo watch --clear --exec test"
   },
   "eslintConfig": {
     "extends": [

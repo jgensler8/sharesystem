@@ -48,6 +48,13 @@ Resources
   auth: searchengine_id == accounts[0].owner and accounts[0].is_signer == true
 */
 
+export const INSTRUCTION_DEFAULT = 0;
+export const INSTRUCTION_UPDATE_ACCOUNT = 1;
+export const INSTRUCTION_REGISTER_RESOURCE = 2;
+export const INSTRUCTION_REGISTER_INTENT = 3;
+
+export let EMPTY_PUBLIC_KEY = new PublicKey(new Uint8Array(32));
+
 export class TrustTableEntry {
   id: PublicKey;
   value: number;
@@ -110,14 +117,22 @@ export class Location {
 export class Resource {
   name: string;
   location: Location;
-  programId: PublicKey;
+  address: PublicKey;
   trustThreshold: number;
 
-  constructor(name: string, location: Location, programId: PublicKey, trustThreshold: number) {
+  constructor(name: string, location: Location, address: PublicKey, trustThreshold: number) {
     this.name = name;
     this.location = location;
-    this.programId = programId;
+    this.address = address;
     this.trustThreshold = trustThreshold;
+  }
+}
+
+export class ResourceIndex {
+  resources: Map<string, Array<PublicKey>>
+
+  constructor(resources: Map<string, Array<PublicKey>>) {
+    this.resources = resources;
   }
 }
 
@@ -178,6 +193,11 @@ export interface ISearchEngine {
   Will also need to describe how much memory (based on the number of people * wallet id size * claim pointer size)
   */
   registerResource(resource: Resource): Promise<void>;
+
+  /*
+  Read the resource index from the database. The resource index does not contain all metadata and contracts will need to be queried individually
+  */
+  getResourceIndex(): Promise<ResourceIndex>;
 
   /*
   Find resources able to the claimed. Likely can use zipcode/lat+long plus radius

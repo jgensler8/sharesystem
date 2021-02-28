@@ -4,25 +4,18 @@ import {
   BpfLoader,
   BPF_LOADER_PROGRAM_ID,
   PublicKey,
-  LAMPORTS_PER_SOL,
-  SystemProgram,
-  TransactionInstruction,
-  Transaction,
-  sendAndConfirmTransaction,
   Version,
   clusterApiUrl,
   Cluster,
 } from '@solana/web3.js';
 
 import dotenv from 'dotenv';
-import path from 'path';
 import fs from 'mz/fs';
-import mkdirp from 'mkdirp';
 // TODO(jeffg) would be nice to make this conditional, maybe need some JSON file with all variables
 import searchengine from './searchengine_deploy.out.json'
 import resource from './resource_deploy.out.json'
+import database from './searchengine_database_keygen.out.json'
 import privateKey from './keygen.out.json'
-import { key } from 'ionicons/icons';
 
 /**
  * Program address will have different values for local development and production
@@ -47,6 +40,13 @@ export async function loadResourceAddressFromEnvironment(): Promise<PublicKey> {
     return new PublicKey(resource["programId"]);
   }
   return new Account().publicKey;
+}
+export async function loadDatabaseAddressFromEnvironment(): Promise<Account> {
+  // TODO(jeffg): support production environment
+  if(database.length) {
+    return new Account(Uint8Array.from(database));
+  }
+  return new Account();
 }
 export async function loadAccountFromEnvironment(): Promise<Account> {
   if(privateKey.length){

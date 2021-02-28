@@ -1,5 +1,5 @@
-import { Account } from '@solana/web3.js';
-import { TrustTableEntry, SearchEngineAccount } from './lib-types';
+import { Account, PublicKey } from '@solana/web3.js';
+import { TrustTableEntry, SearchEngineAccount, Resource, Location, ResourceInstance, ResourceIndex } from './lib-types';
 import { toBorsh, toTyped } from './lib-serialization';
 
 describe('borsh', () => {
@@ -17,9 +17,8 @@ describe('borsh', () => {
     })
 
     test('can deserialize SearchEngineAccount', () => {
-        let them = new Account;
+        let them = new Account();
         let trustTableEntry = new TrustTableEntry(them.publicKey, 100);
-        let us = new Account();
         let searchEngineAccount = new SearchEngineAccount("us", [trustTableEntry]);
 
         const arr = toBorsh(searchEngineAccount);
@@ -29,4 +28,26 @@ describe('borsh', () => {
         expect(searchEngineAccount).toStrictEqual(typed);
     })
 
+    test('can desserialize Resource', () => {
+        let account = new Account();
+        let resource = new Resource("myname", new Location("94040"), account.publicKey, 10);
+
+        const arr = toBorsh(resource);
+
+        const buffer = Buffer.from(arr);
+        const typed = toTyped(Resource, buffer);
+        expect(resource).toStrictEqual(typed);
+    })
+
+    test('can deserialize ResourceIndex', () => {
+        let map = new Map<Location, Array<PublicKey>>();
+        map.set(new Location("94040"), [new Account().publicKey])
+        let index = new ResourceIndex(map);
+
+        const arr = toBorsh(index);
+
+        const buffer = Buffer.from(arr);
+        const typed = toTyped(ResourceIndex, buffer);
+        expect(index).toStrictEqual(typed);
+    })
 })

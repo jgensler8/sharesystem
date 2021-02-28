@@ -1,5 +1,4 @@
 use borsh::{BorshDeserialize, BorshSerialize};
-use std::collections::{HashMap};
 
 pub const PUBLIC_KEY_SIZE: usize = 32;
 
@@ -25,7 +24,7 @@ pub struct SearchEngineAccount {
 
 pub const MAX_ZIP_SIZE: usize = 32;
 
-#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Copy, Ord)]
+#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq, Copy, Default)]
 pub struct Location {
     pub zip: [u8; MAX_ZIP_SIZE],
 }
@@ -38,9 +37,17 @@ pub struct Resource {
     pub trust_threshold: u8,
 }
 
-pub const MAX_NUM_RESOURCE_IN_BUCKET: usize = 10;
+pub const MAX_NUM_RESOURCE_IN_BUCKET: usize = 3;
+
+#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq, Default, Copy)]
+pub struct ResourceBucket {
+    pub location: Location,
+    pub addresses: [[u8; PUBLIC_KEY_SIZE]; MAX_NUM_RESOURCE_IN_BUCKET],
+}
+
+pub const MAX_INDEX_BUCKETS: usize = 3;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq)]
 pub struct ResourceIndex {
-    pub map: HashMap<Location, [[u8; PUBLIC_KEY_SIZE]; MAX_NUM_RESOURCE_IN_BUCKET]>,
+    pub buckets: [ResourceBucket; MAX_INDEX_BUCKETS],
 }

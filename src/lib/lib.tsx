@@ -8,8 +8,11 @@ import {
   sendAndConfirmTransaction,
 } from '@solana/web3.js';
 import { Store, WrongInstanceError, KeyNotFoundError } from './util';
-import { IResourceAPI, ISearchEngine, ChallengeTable, Resource, ResourceInstance, Challenege, SearchEngineAccount, Location } from './lib-types';
-import { toBorsh, toTyped } from './lib-serialization';
+import {
+  IResourceAPI, ISearchEngine, ChallengeTable, Resource, ResourceInstance,
+  Challenege, SearchEngineAccount, Location, INSTRUCTION_UPDATE_ACCOUNT, INSTRUCTION_REGISTER_RESOURCE, ResourceIndex
+} from './lib-types';
+import { toBorsh, toTyped, SEARCH_ENGINE_ACCOUNT_SPACE } from './lib-serialization';
 
 
 export class ResourceAPI implements IResourceAPI {
@@ -87,18 +90,15 @@ export class ResourceAPI implements IResourceAPI {
 export class SearchEngineAPI implements ISearchEngine {
   connection: Connection;
   programId: PublicKey;
+  databaseId: PublicKey;
   payerAccount: Account;
   store: Store;
   readonly ACCOUNT_KEY = "searchengine_this_account"
-  readonly SEARCH_ENGINE_ACCOUNT_SPACE = 45;
-  readonly INSTRUCTION_DEFAULT = 0;
-  readonly INSTRUCTION_UPDATE_ACCOUNT = 1;
-  readonly INSTRUCTION_REGISTER_RESOURCE = 2;
-  readonly INSTRUCTION_REGISTER_INTENT = 3;
 
-  constructor(connection: Connection, programId: PublicKey, store: Store, payerAccount: Account) {
+  constructor(connection: Connection, programId: PublicKey, databaseId: PublicKey, store: Store, payerAccount: Account) {
     this.connection = connection;
     this.programId = programId;
+    this.databaseId = databaseId;
     this.store = store;
     this.payerAccount = payerAccount;
   }
@@ -125,13 +125,13 @@ export class SearchEngineAPI implements ISearchEngine {
   async createDefaultSearchEngineAccount(account: Account, friendlyName: string): Promise<SearchEngineAccount> {
     let searchEngineAccount = new SearchEngineAccount(friendlyName, []);
     // store on chain
-    const lamports = await this.connection.getMinimumBalanceForRentExemption(this.SEARCH_ENGINE_ACCOUNT_SPACE);
+    const lamports = await this.connection.getMinimumBalanceForRentExemption(SEARCH_ENGINE_ACCOUNT_SPACE);
     const transaction = new Transaction().add(
       SystemProgram.createAccount({
         fromPubkey: this.payerAccount.publicKey,
         newAccountPubkey: account.publicKey,
         lamports: lamports,
-        space: this.SEARCH_ENGINE_ACCOUNT_SPACE,
+        space: SEARCH_ENGINE_ACCOUNT_SPACE,
         programId: this.programId,
       }),
     );
@@ -168,7 +168,7 @@ export class SearchEngineAPI implements ISearchEngine {
     // update internal store
     this.store.put(this.ACCOUNT_KEY, searchEngineAccount);
     // update blockchain with transaction
-    let instruction = new Uint8Array([this.INSTRUCTION_UPDATE_ACCOUNT]);
+    let instruction = new Uint8Array([INSTRUCTION_UPDATE_ACCOUNT]);
     let instruction_data = toBorsh(searchEngineAccount);
     let combined = new Uint8Array(1 + instruction_data.length);
     combined.set(instruction);
@@ -212,26 +212,39 @@ export class SearchEngineAPI implements ISearchEngine {
   }
 
   async registerResource(resource: Resource): Promise<void> {
-    // the resource is a contract owned by the person above? I think contracts also have data regions
-    // deploys a new contract and creates the database account for the contract
-    // register resource contract with search engine (factory)
+    let instruction = new Uint8Array([INSTRUCTION_REGISTER_RESOURCE]);
+    let instruction_data = toBorsh(resource);
+    let combined = new Uint8Array(1 + instruction_data.length);
+    combined.set(instruction);
+    combined.set(instruction_data, 1);
+    const transaction = new Transaction().add(
+      new TransactionInstruction({
+        keys: [{ pubkey: this.databaseId, isSigner: false, isWritable: true }],
+        programId: this.programId,
+        data: Buffer.from(combined),
+      }),
+    );
+    await sendAndConfirmTransaction(
+      this.connection,
+      transaction,
+      [this.payerAccount],
+      {
+        commitment: 'singleGossip',
+        preflightCommitment: 'singleGossip',
+      },
+    );
   }
 
-  async listResources(location: Location): Promise<Resource[]> {
-    return [
-      new Resource(
-        "palo alto potatoes",
-        new Location("9420"),
-        new PublicKey("4RmyNU1MCKkqLa6sHs8CC75gXrXaBw6mH9Z3ApkEkJvn"),
-        1.5,
-      ),
-      new Resource(
-        "mountain view tomatoes",
-        new Location("94040"),
-        new PublicKey("2X2sFvM3G8GGzDq2whqTbxFPGyv7U4PRomL8G8LJm3Y6"),
-        0.9,
-      ),
-    ];
+  async getResourceIndex(): Promise<ResourceIndex> {
+    let databaseInfo = await this.connection.getAccountInfo(this.databaseId);
+    if(databaseInfo == null) {
+      throw "NO DATABASE DATA FOUND";
+    }
+    return toTyped(ResourceIndex, databaseInfo.data);
+  }
+
+  async listResources(location: Location): Promise<Array<Resource>> {
+    return [];
   }
 
   async recordIntent(account: SearchEngineAccount, resource: PublicKey): Promise<void> {
