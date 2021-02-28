@@ -59,6 +59,7 @@
     "build:program-rust:resource": "cargo build-bpf --manifest-path=./src/program-rust-resource/Cargo.toml --bpf-out-dir=dist/program && npm run clean:store",
     "clean:program-rust:resource": "cargo clean --manifest-path=./src/program-rust-resource/Cargo.toml && rm -rf ./dist && npm run clean:store",
     "test:program-rust:resource": "cargo test-bpf --manifest-path=./src/program-rust-resource/Cargo.toml",
+    "watch:program-rust:resource": "cd src/program-rust-resource && RUST_BACKTRACE=1 cargo watch --clear --exec test",
     "deploy:program-rust:resource": "solana --url localhost --config ./src/lib/keygen.out.json program deploy dist/program/solana_bpf_resource.so > src/lib/resource_deploy.out.json",
     "build:program-rust:searchengine": "cargo build-bpf --manifest-path=./src/program-rust-searchengine/Cargo.toml --bpf-out-dir=dist/program && npm run clean:store",
     "clean:program-rust:searchengine": "cargo clean --manifest-path=./src/program-rust-searchengine/Cargo.toml && rm -rf ./dist && npm run clean:store",
