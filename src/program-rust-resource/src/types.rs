@@ -73,8 +73,8 @@ pub const MAX_NUM_CHALLENGES: usize = MAX_NUM_RECIPIENTS * MAX_NUM_RECIPIENTS;
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq)]
 pub struct ResourceDatabase {
     pub is_distributed: bool,
-    pub final_instance: ResourceInstance,
+    pub final_quantity: u8,
     pub instances: [ResourceInstance; MAX_NUM_RESOURCE_INSTANCES],
-    pub challenge: [Challenge; MAX_NUM_CHALLENGES],
+    pub challenges: [Challenge; MAX_NUM_CHALLENGES],
     pub claims: [[u8; PUBLIC_KEY_SIZE]; MAX_NUM_RECIPIENTS]
 }

@@ -8,6 +8,14 @@ pub enum ResourceError {
     /// Invalid instruction number passed in.
     #[error("Invalid instruction")]
     InvalidInstruction,
+
+    /// Someone is trying to record a resource instance but there is no empty space in the array
+    #[error("No ResourceInstance Space")]
+    NoResourceInstanceSpace,
+
+    /// Someone is trying to record a resource instance but the Resource is being distributed
+    #[error("ResourceInstance is being distributed")]
+    ResourceInDistribution,
 }
 impl From<ResourceError> for ProgramError {
     fn from(e: ResourceError) -> Self {
