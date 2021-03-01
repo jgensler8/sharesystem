@@ -4,6 +4,7 @@ import {SearchEngineAPI} from '../lib/lib';
 import {ISearchEngine} from '../lib/lib-types';
 import { MockSearchEngineAPI } from '../lib/lib-mock';
 import {establishConnection, loadSearchEngineAddressFromEnvironment, loadAccountFromEnvironment, Store, loadDatabaseAddressFromEnvironment} from '../lib/util';
+import { Account } from '@solana/web3.js';
 
 type SolanaConnectionProps = {
     render(state: SolanaConnectionState): JSX.Element
@@ -25,23 +26,26 @@ export class SolanaConnection extends React.Component<SolanaConnectionProps, Sol
         };
     }
 
-    async loadEverything(): Promise<SolanaConnectionState> {
-        const useMock = true;
+    async asyncLoadAll(): Promise<SolanaConnectionState> {
+        const useMock = false;
         let system: ISearchEngine;
         if(useMock) {
             system = new MockSearchEngineAPI(new Store());
         } else {
-            let searchEngineProgramId = await loadSearchEngineAddressFromEnvironment()
-            let connection = await establishConnection()
-            let payerAccount = await loadAccountFromEnvironment()
+            let searchEngineProgramId = await loadSearchEngineAddressFromEnvironment();
+            let connection = await establishConnection();
+            let payerAccount = await loadAccountFromEnvironment();
             let databaseAccount = await loadDatabaseAddressFromEnvironment();
+
             system = new SearchEngineAPI(connection, searchEngineProgramId, databaseAccount.publicKey, new Store(), payerAccount);    
+
+            await system.createDefaultSearchEngineAccount(new Account(), "default");
         }
         return {...this.state, system: system, loading: false}
     }
 
     componentDidMount() {
-        this.loadEverything()
+        this.asyncLoadAll()
             .then((state: SolanaConnectionState) => {
                 if(this._async_cancel){
                     return;

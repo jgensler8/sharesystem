@@ -244,7 +244,24 @@ export class SearchEngineAPI implements ISearchEngine {
   }
 
   async listResources(location: Location): Promise<Array<Resource>> {
-    return [];
+    let allResources = await this.getResourceIndex();
+    let unresolvedResources: Array<Resource> = [];
+
+    // query for all resources
+    if(location.zip.trim().length === 0) {
+      allResources.resources.forEach((bucket, location_zip, map) => {
+        let unresolvedBucketResources = bucket.map(id => new Resource("unknown", new Location(location_zip), id, 0));
+        unresolvedResources = unresolvedResources.concat(unresolvedBucketResources);
+      });
+      return unresolvedResources;
+    }
+
+    // query for specific resources
+    let locationResources = allResources.resources.get(location.zip);
+    for(let id of locationResources || []) {
+      unresolvedResources.push(new Resource("unknown", location, id, 0))
+    }
+    return unresolvedResources;
   }
 
   async recordIntent(account: SearchEngineAccount, resource: PublicKey): Promise<void> {

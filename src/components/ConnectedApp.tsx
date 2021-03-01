@@ -1,6 +1,6 @@
 import React from 'react';
 import { Challenge, ISearchEngine, Location, Resource, TrustTableEntry } from '../lib/lib-types';
-import { Card, Button, CardGroup, Table, Form } from 'react-bootstrap';
+import { Card, Button, CardGroup, Table, Form, Alert } from 'react-bootstrap';
 import { Account, PublicKey } from '@solana/web3.js';
 
 type ConnectedAppProps = {
@@ -8,7 +8,9 @@ type ConnectedAppProps = {
 }
 
 export type ConnectedAppState = {
-    location?: Location,
+    loading: boolean,
+    error?: Error,
+
     system: ISearchEngine,
 
     trustTable: Array<TrustTableEntry>,
@@ -45,8 +47,7 @@ function TrustTableElement(trustTable: Array<TrustTableEntry>) {
 function TrustTableForm(trustTable: Array<TrustTableEntry>, onSubmit: any) {
     let jsonArray = "{\n"
     for(let entry of trustTable) {
-        jsonArray += `"${entry.id.toBase58()}": ${entry.value},\n`
-        console.log(entry);
+        jsonArray += `"${entry.id.toBase58()}": ${entry.value},\n`;
     }
     // trim last comma
     jsonArray = jsonArray.slice(0, jsonArray.length-2);
@@ -54,8 +55,8 @@ function TrustTableForm(trustTable: Array<TrustTableEntry>, onSubmit: any) {
     return <Form onSubmit={onSubmit}>
         <Form.Group controlId="trustTableForm.rawTrustTable">
             <Form.Control name="rawTable" as="textarea" defaultValue={jsonArray} />
+            <Button type="submit">Update</Button>
         </Form.Group>
-        <Button type="submit">Update</Button>
     </Form>
 }
 
@@ -114,7 +115,7 @@ export class ConnectedApp extends React.Component<ConnectedAppProps, ConnectedAp
     constructor(props: ConnectedAppProps) {
         super(props);
         this.state = {
-            location: new Location("94040"),
+            loading: true,
             system: props.system,
 
             trustTable: [new TrustTableEntry(new Account().publicKey, 10)],
@@ -124,6 +125,8 @@ export class ConnectedApp extends React.Component<ConnectedAppProps, ConnectedAp
             challenges: [new Challenge(new Account().publicKey, new Account().publicKey, false), new Challenge(new Account().publicKey, new Account().publicKey, false)],
             claims: [new Resource("Mr Farmer Potato", new Location("94040"), new Account().publicKey, 100)]
         };
+        
+        this.onSearch = this.onSearch.bind(this);
     }
 
     onTrustTableUpdate(e: React.SyntheticEvent) {
@@ -147,7 +150,49 @@ export class ConnectedApp extends React.Component<ConnectedAppProps, ConnectedAp
             searchField: {value: string}
         };
         const zip = t.searchField.value;
-        console.log(zip);
+        this.state.system.listResources(new Location(zip)).then(resources => {
+            this.setState({
+                ...this.state,
+                resources: resources,
+            })
+        })
+    }
+
+    async asyncLoadAll(): Promise<ConnectedAppState> {
+        console.log("loading indexes");
+
+        let resources = await this.state.system.listResources(new Location("94040"));
+        console.log(resources);
+        let se_account = await this.state.system.getDefaultSearchEngineAccount();
+        console.log(se_account);
+        let intents = await this.state.system.listIntents(se_account);
+        console.log(intents);
+
+        return {
+            ...this.state,
+            resources: resources,
+            // intents: intents,
+        };
+    }
+
+    componentDidMount() {
+        this.asyncLoadAll()
+            .then((state: ConnectedAppState) => {
+                if(this._async_cancel){
+                    return;
+                }
+                this.setState(state)
+            })
+            .catch((error: any) => {
+                if(this._async_cancel){
+                    return;
+                }
+                this.setState({ error: error, loading: false })
+            })
+    }
+
+    componentWillUnmount() {
+        this._async_cancel = true;
     }
 
     render() {
@@ -168,10 +213,13 @@ export class ConnectedApp extends React.Component<ConnectedAppProps, ConnectedAp
                     <h1>Resources</h1>
                     <Form onSubmit={this.onSearch}>
                         <Form.Group controlId="resourceSearch">
-                            <Form.Control name="searchField" type="text" />
+                            <Form.Control name="searchField" type="text" placeholder="example: 94040" />
+                            <Button type="submit">Search</Button>
                         </Form.Group>
-                        <Button type="submit">Search</Button>
                     </Form>
+                    {
+                        this.state.resources.length === 0 ? <Alert variant="warning">No Search Results</Alert> : <div></div>
+                    }
                     <CardGroup>{this.state.resources.map(resource => ResourceCard(resource))}</CardGroup>
                 </div>
                 <div style={{paddingTop: '75px'}}>
