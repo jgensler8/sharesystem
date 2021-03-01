@@ -16,6 +16,10 @@ pub enum SearchEngineError {
     /// Database bucket can't hold any more addresses
     #[error("Bucket full")]
     BucketFull,
+
+    /// Someone is trying to create an intent for a Resource that does not exist in the Database
+    #[error("Resource Not Registered")]
+    ResourceNotRegistered,
 }
 impl From<SearchEngineError> for ProgramError {
     fn from(e: SearchEngineError) -> Self {

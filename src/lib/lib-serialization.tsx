@@ -28,16 +28,18 @@ AllBorshSchemas.set(BorshTrustTableEntry, {
 });
 
 const MAX_FRIENDLY_NAME_SIZE = 32;
+const MAX_NUM_INTENTS = 3;
 export class BorshSearchEngineAccount extends BorshConstructable { }
 AllBorshSchemas.set(BorshSearchEngineAccount, {
     kind: 'struct',
     fields: [
         ['friendlyName', [MAX_FRIENDLY_NAME_SIZE]],
-        ['trustTable', [33]]
+        ['trustTable', [PUBLIC_KEY_SIZE + 1]],
+        ['intents', [PUBLIC_KEY_SIZE * MAX_NUM_INTENTS]],
     ]
 })
 // TODO calculate this using borsh library
-export const SEARCH_ENGINE_ACCOUNT_SPACE = 65;
+export const SEARCH_ENGINE_ACCOUNT_SPACE = 161;
 
 const MAX_ZIP_SIZE = 32;
 export class BorshLocation extends BorshConstructable { }
@@ -114,10 +116,21 @@ function toBorsh(libObject: any): Uint8Array {
             trustTableEntries = Uint8Array.from([...trustTableEntries, ...serialized]);
             trustTableEntryIndex +=1;
         }
+
+        let intents = new Uint8Array(96);
+        let intentIndex = 0;
+        while(intentIndex < MAX_NUM_INTENTS) {
+            if(intentIndex >= libObject.intents.length) {
+                break;
+            }
+            intents.set(Uint8Array.from(libObject.intents[intentIndex].toBuffer()), intentIndex * PUBLIC_KEY_SIZE);
+            intentIndex += 1;
+        }
         return serialize(AllBorshSchemas,
             new BorshSearchEngineAccount({
                 friendlyName: name,
                 trustTable: trustTableEntries,
+                intents: intents,
             })
         );
     } else if (libObject instanceof Resource) {
@@ -169,7 +182,17 @@ function toTyped(t: any, borshBuffer: Buffer): any {
         if(trustTableEntry.id.toBase58() !== DEFAULT_TRUST_TABLE_ENTRY.id.toBase58()) {
             trustTable.push(trustTableEntry);
         }
-        return new SearchEngineAccount(friendlyName, trustTable);
+
+        let intentIndex = 0;
+        let intents = [];
+        while(intentIndex < MAX_NUM_INTENTS) {
+            let key = new PublicKey(deserialized.intents.slice(intentIndex * PUBLIC_KEY_SIZE, intentIndex * PUBLIC_KEY_SIZE + PUBLIC_KEY_SIZE));
+            if (key.toBase58() !== EMPTY_PUBLIC_KEY.toBase58()) {
+                intents.push(key);
+            }
+            intentIndex += 1;
+        }
+        return new SearchEngineAccount(friendlyName, trustTable, intents);
     } else if (t === Resource) {
         let deserialized = deserialize(AllBorshSchemas, BorshResource, borshBuffer)
         let name = decodeAndUnescape(deserialized.name);

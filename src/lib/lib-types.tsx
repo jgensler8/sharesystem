@@ -1,4 +1,5 @@
 import { PublicKey, Account } from "@solana/web3.js";
+import { timingSafeEqual } from "mz/crypto";
 /*
 Memory Structures
 
@@ -71,10 +72,12 @@ export let MAX_TRUST_TABLE_SIZE = 1;
 export class SearchEngineAccount {
   friendlyName: string;
   trustTable: Array<TrustTableEntry>;
+  intents: Array<PublicKey>;
 
-  constructor(friendlyName: string, trustTable: Array<TrustTableEntry>) {
+  constructor(friendlyName: string, trustTable: Array<TrustTableEntry>, intents: Array<PublicKey>) {
     this.friendlyName = friendlyName;
-    this.trustTable = trustTable
+    this.trustTable = trustTable;
+    this.intents = intents;
   }
 }
 
@@ -212,7 +215,7 @@ export interface ISearchEngine {
   /*
   Signal to resource maintainer that you wish to claim resource by a specific time
   */
-  recordIntent(account: SearchEngineAccount, resource: PublicKey): Promise<void>;
+  registerIntent(account: Account, resource: PublicKey): Promise<void>;
 
-  listIntents(account: SearchEngineAccount): Promise<Array<PublicKey>>;
+  listIntents(account: Account): Promise<Array<PublicKey>>;
 }

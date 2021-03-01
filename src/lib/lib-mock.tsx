@@ -82,13 +82,13 @@ export class MockSearchEngineAPI implements ISearchEngine {
         return resourceList;
     }
 
-    async recordIntent(account: SearchEngineAccount, resource: PublicKey): Promise<void> {
+    async registerIntent(account: Account, resource: PublicKey): Promise<void> {
         let intentsList = await this.listIntents(account);
         intentsList.push(resource);
         this.store.put(this.INTENTS_KEY, intentsList);
     }
 
-    async listIntents(account: SearchEngineAccount): Promise<Array<PublicKey>> {
+    async listIntents(account: Account): Promise<Array<PublicKey>> {
         let intentsList = await this.store.get(this.INTENTS_KEY)
         if (!intentsList) {
             this.store.put(this.INTENTS_KEY, []);

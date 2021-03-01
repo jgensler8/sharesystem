@@ -15,11 +15,13 @@ pub struct TrustTableEntry {
 
 pub const MAX_TRUST_TABLE_SIZE: usize = 1;
 pub const MAX_FRIENDLY_NAME_SIZE: usize = 32;
+pub const MAX_NUM_INTENTS: usize = 3;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, PartialEq)]
 pub struct SearchEngineAccount {
     pub friendly_name: [u8; MAX_FRIENDLY_NAME_SIZE],
     pub trust_table: [TrustTableEntry; MAX_TRUST_TABLE_SIZE],
+    pub intents: [[u8; PUBLIC_KEY_SIZE]; MAX_NUM_INTENTS],
 }
 
 pub const MAX_ZIP_SIZE: usize = 32;

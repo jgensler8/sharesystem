@@ -17,7 +17,7 @@ pub enum SearchEngineInstruction {
     Default(),
     UpdateAccount(SearchEngineAccount),
     RegisterResource(Resource),
-    RegisterIntent(Resource),
+    RegisterIntent(),
 }
 
 impl SearchEngineInstruction {
@@ -44,12 +44,7 @@ impl SearchEngineInstruction {
                 }
             }
             INSTRUCTION_REGISTER_INTENT => {
-                match Resource::try_from_slice(_rest) {
-                    Ok(resource) => Self::RegisterIntent(resource),
-                    Err(_err) => {
-                        return Err(ProgramError::InvalidInstructionData)
-                    }
-                }
+                Self::RegisterIntent()
             }
             _ => return Err(InvalidInstruction.into()),
         })
@@ -76,6 +71,8 @@ mod test {
         MAX_TRUST_TABLE_SIZE,
         MAX_FRIENDLY_NAME_SIZE,
         MAX_ZIP_SIZE,
+        PUBLIC_KEY_SIZE,
+        MAX_NUM_INTENTS,
     };
 
     #[test]
@@ -103,7 +100,7 @@ mod test {
     #[test]
     fn test_upack_update_account() {
         let mut data = Vec::<u8>::new();
-        data.push(1);
+        data.push(INSTRUCTION_UPDATE_ACCOUNT);
         let name_str = String::from("jeff");
         let mut name = [0u8; MAX_FRIENDLY_NAME_SIZE];
         for (place, data) in name.iter_mut().zip(name_str.as_bytes().iter()) {
@@ -115,6 +112,7 @@ mod test {
                 to: Pubkey::new_unique().to_bytes(),
                 value: 10,
             }; MAX_TRUST_TABLE_SIZE],
+            intents: [[0u8; PUBLIC_KEY_SIZE]; MAX_NUM_INTENTS],
         };
         data.append(&mut search_engine_account.try_to_vec().unwrap());
 
@@ -126,7 +124,7 @@ mod test {
     #[test]
     fn test_unpack_register_resource() {
         let mut data = Vec::new();
-        data.push(2);
+        data.push(INSTRUCTION_REGISTER_RESOURCE);
         let name_str = String::from("jeff");
         let mut name = [0u8; MAX_FRIENDLY_NAME_SIZE];
         for (place, data) in name.iter_mut().zip(name_str.as_bytes().iter()) {
@@ -155,29 +153,10 @@ mod test {
     #[test]
     fn test_unpack_register_intent() {
         let mut data = Vec::new();
-        data.push(3);
-        let name_str = String::from("jeff");
-        let mut name = [0u8; MAX_FRIENDLY_NAME_SIZE];
-        for (place, data) in name.iter_mut().zip(name_str.as_bytes().iter()) {
-            *place = *data
-        }
-        let zip_str = String::from("12345");
-        let mut zip = [0u8; MAX_ZIP_SIZE];
-        for (place, data) in zip.iter_mut().zip(zip_str.as_bytes().iter()) {
-            *place = *data
-        }
-        let resource = Resource {
-            address: Pubkey::new_unique().to_bytes(),
-            location: Location {
-                zip: zip,
-            },
-            name: name,
-            trust_threshold: 10,
-        };
-        data.append(&mut resource.try_to_vec().unwrap());
+        data.push(INSTRUCTION_REGISTER_INTENT);
 
         let result = SearchEngineInstruction::unpack(&data).unwrap();
-        let expected = SearchEngineInstruction::RegisterIntent(resource);
+        let expected = SearchEngineInstruction::RegisterIntent();
         assert_eq!(expected, result);
     }
 }

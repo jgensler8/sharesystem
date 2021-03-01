@@ -19,7 +19,8 @@ describe('borsh', () => {
     test('can deserialize SearchEngineAccount', () => {
         let them = new Account();
         let trustTableEntry = new TrustTableEntry(them.publicKey, 100);
-        let searchEngineAccount = new SearchEngineAccount("us", [trustTableEntry]);
+        let intent = new Account().publicKey;
+        let searchEngineAccount = new SearchEngineAccount("us", [trustTableEntry], [intent]);
 
         const arr = toBorsh(searchEngineAccount);
 

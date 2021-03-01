@@ -10,7 +10,8 @@ import {
 import { Store, WrongInstanceError, KeyNotFoundError } from './util';
 import {
   IResourceAPI, ISearchEngine, ChallengeTable, Resource, ResourceInstance,
-  Challenge, SearchEngineAccount, Location, INSTRUCTION_UPDATE_ACCOUNT, INSTRUCTION_REGISTER_RESOURCE, ResourceIndex
+  Challenge, SearchEngineAccount, Location, INSTRUCTION_UPDATE_ACCOUNT, INSTRUCTION_REGISTER_RESOURCE,
+  ResourceIndex, INSTRUCTION_REGISTER_INTENT,
 } from './lib-types';
 import { toBorsh, toTyped, SEARCH_ENGINE_ACCOUNT_SPACE } from './lib-serialization';
 
@@ -123,7 +124,7 @@ export class SearchEngineAPI implements ISearchEngine {
   }
 
   async createDefaultSearchEngineAccount(account: Account, friendlyName: string): Promise<SearchEngineAccount> {
-    let searchEngineAccount = new SearchEngineAccount(friendlyName, []);
+    let searchEngineAccount = new SearchEngineAccount(friendlyName, [], []);
     // store on chain
     const lamports = await this.connection.getMinimumBalanceForRentExemption(SEARCH_ENGINE_ACCOUNT_SPACE);
     const transaction = new Transaction().add(
@@ -264,20 +265,31 @@ export class SearchEngineAPI implements ISearchEngine {
     return unresolvedResources;
   }
 
-  async recordIntent(account: SearchEngineAccount, resource: PublicKey): Promise<void> {
-    // instead, the "intent" might just be submitting a trust table
-
-    // Example: instead of incrementing a counter, we need to append the some account ID (passed as some parameter) to a list stored in data
-    // let mut data = account.try_borrow_mut_data()?;
-    // let mut num_greets = LittleEndian::read_u32(&data);
-    // num_greets += 1;
-    // ... would turn into ...
-    // let mut data = account.try_borrow_mut_data()?
-    // let mut account_list: []AccountInfo = some_borsh_call::read_array(&data)
-    // account_list.append(account_intent)
+  async registerIntent(account: Account, resource: PublicKey): Promise<void> {
+    let instruction = new Uint8Array([INSTRUCTION_REGISTER_INTENT]);
+    const transaction = new Transaction().add(
+      new TransactionInstruction({
+        keys: [
+          { pubkey: this.databaseId, isSigner: false, isWritable: false },
+          { pubkey: account.publicKey, isSigner: false, isWritable: true},
+          { pubkey: resource, isSigner: false, isWritable: false},
+        ],
+        programId: this.programId,
+        data: Buffer.from(instruction),
+      }),
+    );
+    await sendAndConfirmTransaction(
+      this.connection,
+      transaction,
+      [this.payerAccount],
+      {
+        commitment: 'singleGossip',
+        preflightCommitment: 'singleGossip',
+      },
+    );
   }
 
-  async listIntents(account: SearchEngineAccount): Promise<Array<PublicKey>> {
+  async listIntents(account: Account): Promise<Array<PublicKey>> {
     return [];
   }
 }
