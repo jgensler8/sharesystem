@@ -45,7 +45,7 @@ function TrustTableElement(trustTable: Array<TrustTableEntry>) {
 function TrustTableForm(trustTable: Array<TrustTableEntry>, onSubmit: any) {
     return <Form>
         <Form.Group controlId="trustTableForm.rawTrustTable">
-            <Form.Control as="textarea" rows={3} defaultValue={JSON.stringify(trustTable)} />
+            <Form.Control as="textarea" defaultValue={JSON.stringify(trustTable)} />
         </Form.Group>
         <Button onClick={onSubmit()}>Update</Button>
     </Form>
@@ -134,28 +134,46 @@ export class ConnectedApp extends React.Component<ConnectedAppProps, ConnectedAp
         console.log("would send request");
     }
 
+    onSearch() {
+        console.log("would search")
+    }
+
     render() {
         return (
             <div>
-                <div>Your Account</div>
-                <div>Trust Table</div>
-                {
-                    TrustTableElement(this.state.trustTable)
-                }
-                <p>
-                    Edit
-                </p>
-                {
-                    TrustTableForm(this.state.trustTable, this.onTrustTableUpdate)
-                }
-                <div>Resources</div>
-                <CardGroup>{this.state.resources.map(resource => ResourceCard(resource))}</CardGroup>
-                <div>Intents</div>
-                <CardGroup>{this.state.intents.map(resource => IntentCard(resource))}</CardGroup>
-                <div>Challenges</div>
-                <CardGroup>{this.state.challenges.map(challenge => ChallengeCard(challenge))}</CardGroup>
-                <div>Claims</div>
-                <CardGroup>{this.state.claims.map(resource => ClaimCard(resource))}</CardGroup>
+                <div style={{paddingTop: '50px'}}>
+                    <h1>Your Account</h1>
+                    <h2 style={{paddingTop: '25px'}}>Trust Table</h2>
+                    {
+                        TrustTableElement(this.state.trustTable)
+                    }
+                    <h2 style={{paddingTop: '25px'}}>Edit</h2>
+                    {
+                        TrustTableForm(this.state.trustTable, this.onTrustTableUpdate)
+                    }
+                </div>
+                <div style={{paddingTop: '75px'}}>
+                    <h1>Resources</h1>
+                    <Form>
+                        <Form.Group controlId="resourceSearch">
+                            <Form.Control type="text" />
+                        </Form.Group>
+                        <Button onClick={this.onSearch}>Search</Button>
+                    </Form>
+                    <CardGroup>{this.state.resources.map(resource => ResourceCard(resource))}</CardGroup>
+                </div>
+                <div style={{paddingTop: '75px'}}>
+                    <h1>Intents</h1>
+                    <CardGroup>{this.state.intents.map(resource => IntentCard(resource))}</CardGroup>
+                </div>
+                <div style={{paddingTop: '75px'}}> 
+                    <h1>Challenges</h1>
+                    <CardGroup>{this.state.challenges.map(challenge => ChallengeCard(challenge))}</CardGroup>
+                </div>
+                <div style={{paddingTop: '75px'}}>
+                    <h1>Claims</h1>
+                    <CardGroup>{this.state.claims.map(resource => ClaimCard(resource))}</CardGroup>
+                </div>
             </div>
         );
     }
