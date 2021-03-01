@@ -5,13 +5,13 @@
 
 import { PublicKey } from "@solana/web3.js";
 import { TextEncoder, TextDecoder } from "web-encoding";
-import { EMPTY_PUBLIC_KEY, DEFAULT_TRUST_TABLE_ENTRY, Location, MAX_TRUST_TABLE_SIZE, Resource, ResourceIndex, ResourceInstance, SearchEngineAccount, TrustTableEntry } from "./lib-types";
+import { EMPTY_PUBLIC_KEY, DEFAULT_TRUST_TABLE_ENTRY, Location, MAX_TRUST_TABLE_SIZE, Resource, ResourceIndex, SearchEngineAccount, TrustTableEntry } from "./lib-types";
 import { serialize, deserialize } from 'borsh';
 
 class BorshConstructable {
     constructor(properties: object) {
         Object.keys(properties).map((key) => {
-            this[key] = properties[key];
+            return this[key] = properties[key];
         });
     }
 }
@@ -149,33 +149,33 @@ function toBorsh(libObject: any): Uint8Array {
                 resources: resources,
             })
         );
-    } else if (libObject == undefined) {
-        throw "undefined passed to toBorsh. This is probably from an assumption in a specific if-else block of toBorsh (arrays are certain size, certain fields set)"  
+    } else if (libObject === undefined) {
+        throw new Error("undefined passed to toBorsh. This is probably from an assumption in a specific if-else block of toBorsh (arrays are certain size, certain fields set)");
     } else {
-        throw "type not supported, add to AllBorshSchemas variable in lib-serialization. also make sure server side supports this type";
+        throw new Error("type not supported, add to AllBorshSchemas variable in lib-serialization. also make sure server side supports this type");
     }
 }
 
 function toTyped(t: any, borshBuffer: Buffer): any {
-    if (t == TrustTableEntry) {
+    if (t === TrustTableEntry) {
         let deserialized = deserialize(AllBorshSchemas, BorshTrustTableEntry, borshBuffer)
         return new TrustTableEntry(new PublicKey(deserialized.id), deserialized.value);
-    } else if (t == SearchEngineAccount) {
+    } else if (t === SearchEngineAccount) {
         let deserialized = deserialize(AllBorshSchemas, BorshSearchEngineAccount, borshBuffer);
         let friendlyName = decodeAndUnescape(deserialized.friendlyName);
         // TODO: iterative over buffer and deserialze individual elements
         let trustTableEntry = toTyped(TrustTableEntry, Buffer.from(deserialized.trustTable));
         let trustTable = [];
-        if(trustTableEntry.id.toBase58() != DEFAULT_TRUST_TABLE_ENTRY.id.toBase58()) {
+        if(trustTableEntry.id.toBase58() !== DEFAULT_TRUST_TABLE_ENTRY.id.toBase58()) {
             trustTable.push(trustTableEntry);
         }
         return new SearchEngineAccount(friendlyName, trustTable);
-    } else if (t == Resource) {
+    } else if (t === Resource) {
         let deserialized = deserialize(AllBorshSchemas, BorshResource, borshBuffer)
         let name = decodeAndUnescape(deserialized.name);
         let zip = decodeAndUnescape(deserialized.location);
         return new Resource(name, new Location(zip), new PublicKey(deserialized.address), deserialized.trustThreshold);
-    } else if (t == ResourceIndex) {
+    } else if (t === ResourceIndex) {
         let bucketIndex = 0;
         let map = new Map<Location, Array<PublicKey>>();
         while(bucketIndex < MAX_INDEX_BUCKETS) {
@@ -191,7 +191,7 @@ function toTyped(t: any, borshBuffer: Buffer): any {
             while(bucketValueIndex < MAX_NUM_RESOURCE_IN_BUCKET) {
                 let addressOffset = bucketOffset + MAX_ZIP_SIZE + (bucketValueIndex * PUBLIC_KEY_SIZE);
                 let key = new PublicKey(borshBuffer.slice(addressOffset, addressOffset + PUBLIC_KEY_SIZE))
-                if (key.toBase58() != EMPTY_PUBLIC_KEY.toBase58()) {
+                if (key.toBase58() !== EMPTY_PUBLIC_KEY.toBase58()) {
                     bucket.push(key);
                 }
                 bucketValueIndex += 1;
@@ -202,7 +202,7 @@ function toTyped(t: any, borshBuffer: Buffer): any {
 
         return new ResourceIndex(map);
     } else {
-        throw "type not supported. add a custom Borsh object in lib-serialization. also make sure server side supports this type";
+        throw new Error("type not supported. add a custom Borsh object in lib-serialization. also make sure server side supports this type");
     }
 }
 

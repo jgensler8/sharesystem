@@ -28,14 +28,14 @@ function LearnPage() {
                 Following a resource moving into distribution, a <u>challenge</u> is issued between each of the Recipients.
                     </p>
             <p>
-                When creating a resource, the Resource Owner creates a <u>Trust Threshold</u> to signal the <u>Total Trust Value</u> a Recipient needs to <u>Claim</u> a resource.
+                When creating a resource, the Resource Owner creates a <u>Trust Threshold</u> to quantify the <u>Total Trust Value</u> a Recipient needs to <u>Claim</u> a resource.
                     </p>
             <p>
                 Recipients edit a <u>Trust Table</u> to record how much trust they have in other participents.
                       This trust value is an integer between zero to one hundred and the sum of all values in a Trust Table must be less than one hundred.
                     </p>
             <p>
-                The Total Trust Value calculation is: <u>the trust value between the Resource Owner and the Recipient</u> multiplied by <u>the sum of accepted challenges targeting a Recipient</u>.
+                The Total Trust Value calculation is: <u>the trust value between the Resource Owner and the Recipient</u> multiplied by <u>the sum of approved challenges targeting a Recipient</u>.
                     </p>
             <p>
                 If this calculation is greater than the Trust Threshold, the Recipient is allowed to <u>claim</u> their fair share of the Resource.

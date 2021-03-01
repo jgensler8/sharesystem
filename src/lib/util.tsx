@@ -69,7 +69,7 @@ function chooseCluster(): Cluster | undefined {
     }
   }
   if (process.env.CLUSTER) {
-    throw `Unknown cluster "${process.env.CLUSTER}", check the .env file`;
+    throw new Error(`Unknown cluster "${process.env.CLUSTER}", check the .env file`);
   } else {
     throw new Error('CLUSTER is not specified, check the .env file');
   }
@@ -219,7 +219,7 @@ export async function newAccountWithLamports(
   await connection.requestAirdrop(account.publicKey, lamports);
   for (; ;) {
     await sleep(500);
-    if (lamports == (await connection.getBalance(account.publicKey))) {
+    if (lamports === (await connection.getBalance(account.publicKey))) {
       return account;
     }
     if (--retries <= 0) {

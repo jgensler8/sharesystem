@@ -2,7 +2,7 @@ import {
     Account,
     PublicKey,
 } from '@solana/web3.js';
-import { ISearchEngine, SearchEngineAccount, Resource, Location, ResourceInstance, ResourceIndex } from './lib-types';
+import { ISearchEngine, SearchEngineAccount, Resource, Location, ResourceIndex } from './lib-types';
 import { randomInt } from 'mz/crypto';
 import { Store, WrongInstanceError, KeyNotFoundError } from './util';
 

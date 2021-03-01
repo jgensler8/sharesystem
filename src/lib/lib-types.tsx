@@ -86,7 +86,7 @@ export class ResourceInstance {
   }
 }
 
-export class Challenege {
+export class Challenge {
   fromAddress: PublicKey;
   toAddress: PublicKey;
   accepted: boolean;
@@ -99,9 +99,9 @@ export class Challenege {
 }
 
 export class ChallengeTable {
-  entries: Array<Challenege>
+  entries: Array<Challenge>
 
-  constructor(entries: Array<Challenege>) {
+  constructor(entries: Array<Challenge>) {
     this.entries = entries;
   }
 }
@@ -159,7 +159,7 @@ export interface IResourceAPI {
   /*
   approve a challenge to increase challenge trust level and (hopefully/eventually) enable the resource to be claimed
   */
-  approveChallenge(challenege: Challenege): Promise<void>;
+  approveChallenge(challenege: Challenge): Promise<void>;
 
   /*
   claim the rewards from a challenge

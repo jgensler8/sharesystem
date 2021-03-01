@@ -10,7 +10,7 @@ import {
 import { Store, WrongInstanceError, KeyNotFoundError } from './util';
 import {
   IResourceAPI, ISearchEngine, ChallengeTable, Resource, ResourceInstance,
-  Challenege, SearchEngineAccount, Location, INSTRUCTION_UPDATE_ACCOUNT, INSTRUCTION_REGISTER_RESOURCE, ResourceIndex
+  Challenge, SearchEngineAccount, Location, INSTRUCTION_UPDATE_ACCOUNT, INSTRUCTION_REGISTER_RESOURCE, ResourceIndex
 } from './lib-types';
 import { toBorsh, toTyped, SEARCH_ENGINE_ACCOUNT_SPACE } from './lib-serialization';
 
@@ -57,18 +57,18 @@ export class ResourceAPI implements IResourceAPI {
     // let mut challenges: []Challenge = some_borsh_call::read_array(&data)
     // return challenges
     return new ChallengeTable([
-      new Challenege(new PublicKey("4RmyNU1MCKkqLa6sHs8CC75gXrXaBw6mH9Z3ApkEkJvn"), new PublicKey("2X2sFvM3G8GGzDq2whqTbxFPGyv7U4PRomL8G8LJm3Y6"), false),
-      new Challenege(new PublicKey("2X2sFvM3G8GGzDq2whqTbxFPGyv7U4PRomL8G8LJm3Y6"), new PublicKey("4RmyNU1MCKkqLa6sHs8CC75gXrXaBw6mH9Z3ApkEkJvn"), false)
+      new Challenge(new PublicKey("4RmyNU1MCKkqLa6sHs8CC75gXrXaBw6mH9Z3ApkEkJvn"), new PublicKey("2X2sFvM3G8GGzDq2whqTbxFPGyv7U4PRomL8G8LJm3Y6"), false),
+      new Challenge(new PublicKey("2X2sFvM3G8GGzDq2whqTbxFPGyv7U4PRomL8G8LJm3Y6"), new PublicKey("4RmyNU1MCKkqLa6sHs8CC75gXrXaBw6mH9Z3ApkEkJvn"), false)
     ])
   }
 
-  async approveChallenge(challenege: Challenege): Promise<void> {
+  async approveChallenge(challenege: Challenge): Promise<void> {
     // let mut challenges: []Challenge = some_borsh_call::read_array(&data)
     // for challenge in challenges:
     //   if req.to == challenge.to && param.to == challenge.to && req.from == challenge.from
     //     challenege.approved = true
   }
-  async denyChallenge(challenege: Challenege): Promise<void> {
+  async denyChallenge(challenege: Challenge): Promise<void> {
   }
 
   async claimChallenge() {
@@ -135,7 +135,7 @@ export class SearchEngineAPI implements ISearchEngine {
         programId: this.programId,
       }),
     );
-    let result = await sendAndConfirmTransaction(
+    await sendAndConfirmTransaction(
       this.connection,
       transaction,
       [this.payerAccount, account],
@@ -200,7 +200,7 @@ export class SearchEngineAPI implements ISearchEngine {
         // TODO: change to get_account_info
         let accountInfo = await this.connection.getAccountInfo(key);
         if (accountInfo == null) {
-          throw "NO ACCOUNT INFO FOUND";
+          throw new Error("NO ACCOUNT INFO FOUND");
         }
         let searchEngineAccount: SearchEngineAccount = toTyped(SearchEngineAccount, accountInfo.data);
         // store in cache
@@ -238,7 +238,7 @@ export class SearchEngineAPI implements ISearchEngine {
   async getResourceIndex(): Promise<ResourceIndex> {
     let databaseInfo = await this.connection.getAccountInfo(this.databaseId);
     if(databaseInfo == null) {
-      throw "NO DATABASE DATA FOUND";
+      throw new Error("NO DATABASE DATA FOUND");
     }
     return toTyped(ResourceIndex, databaseInfo.data);
   }

@@ -3,7 +3,7 @@ import './App.css';
 import {Navbar, Nav, Container, Row, Col} from 'react-bootstrap';
 // import 'bootstrap/dist/css/bootstrap.css';
 import './bootstrap.css';
-import { Route, BrowserRouter as Router, Switch } from 'react-router-dom';
+import { Route, BrowserRouter as Router, Switch, Redirect } from 'react-router-dom';
 import { LinkContainer } from 'react-router-bootstrap';
 import LearnPage from './components/LearnPage';
 import AppPage from './components/AppPage';
@@ -44,6 +44,7 @@ function App() {
                 <Route path="/learn">
                   <LearnPage />
                 </Route>
+                <Redirect from="/" to="learn" />
               </Switch>
             </Col>
             <Col lg xl></Col>
