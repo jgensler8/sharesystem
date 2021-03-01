@@ -38,4 +38,5 @@ src/lib/resource_deploy.out.json
 src/lib/searchengine_deploy.out.json
 src/lib/searchengine_deploy_raw.out.json
 src/lib/searchengine_database_keygen.out.json
+src/lib/searchengine_database_deploy.out.json
 src/lib/store/

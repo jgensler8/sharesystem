@@ -1,76 +1,57 @@
-import { Redirect, Route } from 'react-router-dom';
-import {
-  IonApp,
-  IonIcon,
-  IonLabel,
-  IonRouterOutlet,
-  IonTabBar,
-  IonTabButton,
-  IonTabs,
-} from '@ionic/react';
-import { IonReactRouter } from '@ionic/react-router';
-import { ellipse, square, triangle } from 'ionicons/icons';
-import AccountTab from './pages/AccountTab';
-import ResourcesTab from './pages/ResourcesTab';
-import ChallengesTab from './pages/ChallengesTab';
+import React from 'react';
+import './App.css';
+import {Navbar, Nav, Container, Row, Col} from 'react-bootstrap';
+// import 'bootstrap/dist/css/bootstrap.css';
+import './bootstrap.css';
+import { Route, BrowserRouter as Router, Switch } from 'react-router-dom';
+import { LinkContainer } from 'react-router-bootstrap';
+import LearnPage from './components/LearnPage';
+import AppPage from './components/AppPage';
 
-/* Core CSS required for Ionic components to work properly */
-import '@ionic/react/css/core.css';
+function App() {
+  return (
+    <div className="App">
+      <Router>
+        <Navbar className="justify-content-center" bg="light" expand="sm">
+          <Navbar.Toggle aria-controls="basic-navbar-nav" />
+          <Navbar.Collapse id="basic-navbar-nav">
+          </Navbar.Collapse>
+          <Navbar.Collapse id="basic-navbar-nav">
+            <Nav className="mr-auto">
+              <LinkContainer to="/learn">
+                <Nav.Link>Learn</Nav.Link>
+              </LinkContainer>
+              <Nav.Link></Nav.Link>
+              <LinkContainer to="/learn">
+                <Navbar.Brand className="mr-auto" >ShareSystem</Navbar.Brand>
+              </LinkContainer>
+              <Nav.Link></Nav.Link>
+              <LinkContainer to="/app">
+                <Nav.Link>Use</Nav.Link>
+              </LinkContainer>
+            </Nav>
+          </Navbar.Collapse>
+        </Navbar>
 
-/* Basic CSS for apps built with Ionic */
-import '@ionic/react/css/normalize.css';
-import '@ionic/react/css/structure.css';
-import '@ionic/react/css/typography.css';
-
-/* Optional CSS utils that can be commented out */
-import '@ionic/react/css/padding.css';
-import '@ionic/react/css/float-elements.css';
-import '@ionic/react/css/text-alignment.css';
-import '@ionic/react/css/text-transformation.css';
-import '@ionic/react/css/flex-utils.css';
-import '@ionic/react/css/display.css';
-
-/* Theme variables */
-import './theme/variables.css';
-import { SolanaConnection, SolanaConnectionState } from './components/SolanaConnection';
-
-const App: React.FC = () => (
-  <IonApp>
-    <SolanaConnection render={(state: SolanaConnectionState) =>
-      <IonReactRouter>
-        <IonTabs>
-          <IonRouterOutlet>
-            <Route exact path="/account">
-              <AccountTab state={state} />
-            </Route>
-            <Route exact path="/resources">
-              <ResourcesTab state={state}/>
-            </Route>
-            <Route path="/challenges">
-              <ChallengesTab state={state}/>
-            </Route>
-            <Route exact path="/">
-              <Redirect to="/account" />
-            </Route>
-          </IonRouterOutlet>
-          <IonTabBar slot="bottom">
-            <IonTabButton tab="tab1" href="/account">
-              <IonIcon icon={triangle} />
-              <IonLabel>Account</IonLabel>
-            </IonTabButton>
-            <IonTabButton tab="tab2" href="/resources">
-              <IonIcon icon={ellipse} />
-              <IonLabel>Resources</IonLabel>
-            </IonTabButton>
-            <IonTabButton tab="tab3" href="/challenges">
-              <IonIcon icon={square} />
-              <IonLabel>Challenges</IonLabel>
-            </IonTabButton>
-          </IonTabBar>
-        </IonTabs>
-      </IonReactRouter>
-    } />
-  </IonApp>
-);
+        <Container>
+          <Row>
+            <Col lg xl></Col>
+            <Col lg={10} xl={10}>
+              <Switch>
+                <Route path="/app">
+                  <AppPage />
+                </Route>
+                <Route path="/learn">
+                  <LearnPage />
+                </Route>
+              </Switch>
+            </Col>
+            <Col lg xl></Col>
+          </Row>
+        </Container>
+      </Router>
+    </div>
+  );
+}
 
 export default App;
