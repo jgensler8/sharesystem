@@ -40,8 +40,8 @@ describe('borsh', () => {
     })
 
     test('can deserialize ResourceIndex', () => {
-        let map = new Map<Location, Array<PublicKey>>();
-        map.set(new Location("94040"), [new Account().publicKey])
+        let map = new Map<string, Array<PublicKey>>();
+        map.set("94040", [new Account().publicKey])
         let index = new ResourceIndex(map);
 
         const arr = toBorsh(index);

@@ -134,9 +134,9 @@ function toBorsh(libObject: any): Uint8Array {
     } else if (libObject instanceof ResourceIndex) {
         let bucketIndex = 0;
         let resources = new Uint8Array(RESOURCE_INDEX_ACCOUNT_SPACE);
-        libObject.resources.forEach((value, key, map) => {
+        libObject.resources.forEach((value, zip, map) => {
             let bucketOffset = bucketIndex * BUCKET_SPACE;
-            resources.set(paddedString(key.zip, MAX_ZIP_SIZE), bucketOffset);
+            resources.set(paddedString(zip, MAX_ZIP_SIZE), bucketOffset);
             value.forEach((value, index, arr) => {
                 let addressOffset = bucketOffset + MAX_ZIP_SIZE + (index * PUBLIC_KEY_SIZE);
                 resources.set(Uint8Array.from(value.toBuffer()), addressOffset);
