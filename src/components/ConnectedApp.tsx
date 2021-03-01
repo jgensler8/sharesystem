@@ -1,7 +1,7 @@
 import React from 'react';
 import { Challenge, ISearchEngine, Location, Resource, TrustTableEntry } from '../lib/lib-types';
 import { Card, Button, CardGroup, Table, Form } from 'react-bootstrap';
-import { Account } from '@solana/web3.js';
+import { Account, PublicKey } from '@solana/web3.js';
 
 type ConnectedAppProps = {
     system: ISearchEngine
@@ -31,7 +31,7 @@ function TrustTableElement(trustTable: Array<TrustTableEntry>) {
         <tbody>
             {
                 trustTable.map(entry => {
-                    return <tr>
+                    return <tr key={entry.id.toBase58()}>
                         <td>unknown</td>
                         <td>{entry.id.toBase58()}</td>
                         <td>{entry.value}</td>
@@ -43,69 +43,65 @@ function TrustTableElement(trustTable: Array<TrustTableEntry>) {
 }
 
 function TrustTableForm(trustTable: Array<TrustTableEntry>, onSubmit: any) {
-    return <Form>
+    let jsonArray = "{\n"
+    for(let entry of trustTable) {
+        jsonArray += `"${entry.id.toBase58()}": ${entry.value},\n`
+        console.log(entry);
+    }
+    // trim last comma
+    jsonArray = jsonArray.slice(0, jsonArray.length-2);
+    jsonArray += "\n}";
+    return <Form onSubmit={onSubmit}>
         <Form.Group controlId="trustTableForm.rawTrustTable">
-            <Form.Control as="textarea" defaultValue={JSON.stringify(trustTable)} />
+            <Form.Control name="rawTable" as="textarea" defaultValue={jsonArray} />
         </Form.Group>
-        <Button onClick={onSubmit()}>Update</Button>
+        <Button type="submit">Update</Button>
     </Form>
 }
 
 function ResourceCard(resource: Resource) {
-    return <Card style={{ width: '18rem' }}>
+    return <Card style={{ width: '18rem' }} key={resource.address.toBase58()}>
         <Card.Body>
             <Card.Title>{resource.name}</Card.Title>
             <Card.Subtitle className="mb-2 text-muted">{resource.location.zip}</Card.Subtitle>
-            <Card.Text>
-                <p>
-                    trust threshold: {resource.trustThreshold}
-                </p>
-            </Card.Text>
+            <Card.Text>trust threshold: {resource.trustThreshold}</Card.Text>
             <Card.Link href={"https://explorer.solana.com/address/" + resource.address.toBase58()}>View on Solana Explorer</Card.Link>
         </Card.Body>
     </Card>
 }
 
 function IntentCard(resource: Resource) {
-    <Card style={{ width: '18rem' }}>
+    <Card style={{ width: '18rem' }} key={resource.address.toBase58()}>
         <Card.Body>
             <Card.Title>{resource.name}</Card.Title>
             <Card.Subtitle className="mb-2 text-muted">{resource.location.zip}</Card.Subtitle>
-            <Card.Text>
-                <p>
-                    trust threshold: {resource.trustThreshold}
-                </p>
-            </Card.Text>
+            <Card.Text>trust threshold: {resource.trustThreshold}</Card.Text>
             <Card.Link href={"https://explorer.solana.com/address/" + resource.address.toBase58()}>View on Solana Explorer</Card.Link>
         </Card.Body>
     </Card>
 }
 
 function ChallengeCard(challenge: Challenge) {
-    return <Card style={{ width: '18rem' }}>
+    return <Card style={{ width: '18rem' }} key={challenge.fromAddress.toBase58()}>
         <Card.Body>
             <Card.Title>unknown</Card.Title>
             <Card.Subtitle className="mb-2 text-muted">{challenge.toAddress.toBase58()}</Card.Subtitle>
             <Card.Text>
-                <p>
-                    status: {challenge.accepted ? "accepted 👍" : "rejected ⚠️"}
-                </p>
-                <Button>approve</Button>
-                <Button variant="danger">reject</Button>
+                status: {challenge.accepted ? "accepted 👍" : "rejected ⚠️"}
             </Card.Text>
+            <Button>approve</Button>
+            <Button variant="danger">reject</Button>
         </Card.Body>
     </Card>
 }
 
 function ClaimCard(resource: Resource) {
-    return <Card style={{ width: '18rem' }}>
+    return <Card style={{ width: '18rem' }} key={resource.address.toBase58()}>
         <Card.Body>
             <Card.Title>{resource.name}</Card.Title>
             <Card.Subtitle className="mb-2 text-muted">{resource.location.zip}</Card.Subtitle>
             <Card.Text>
-                <p>
-                    trust value: {resource.trustThreshold}
-                </p>
+                trust value: {resource.trustThreshold}
             </Card.Text>
             <Button variant="success">claim</Button>
         </Card.Body>
@@ -130,12 +126,28 @@ export class ConnectedApp extends React.Component<ConnectedAppProps, ConnectedAp
         };
     }
 
-    onTrustTableUpdate() {
+    onTrustTableUpdate(e: React.SyntheticEvent) {
         console.log("would send request");
+        e.preventDefault()
+        const t = e.target as typeof e.target & {
+            rawTable: {value: string}
+        };
+        const kvTable = JSON.parse(t.rawTable.value);
+        let trustTableEntries: Array<TrustTableEntry> = [];
+        for(let key in kvTable) {
+            trustTableEntries.push(new TrustTableEntry(new PublicKey(key), kvTable[key]));
+        }
+        console.log(trustTableEntries);
     }
 
-    onSearch() {
+    onSearch(e: React.SyntheticEvent) {
         console.log("would search")
+        e.preventDefault()
+        const t = e.target as typeof e.target & {
+            searchField: {value: string}
+        };
+        const zip = t.searchField.value;
+        console.log(zip);
     }
 
     render() {
@@ -154,11 +166,11 @@ export class ConnectedApp extends React.Component<ConnectedAppProps, ConnectedAp
                 </div>
                 <div style={{paddingTop: '75px'}}>
                     <h1>Resources</h1>
-                    <Form>
+                    <Form onSubmit={this.onSearch}>
                         <Form.Group controlId="resourceSearch">
-                            <Form.Control type="text" />
+                            <Form.Control name="searchField" type="text" />
                         </Form.Group>
-                        <Button onClick={this.onSearch}>Search</Button>
+                        <Button type="submit">Search</Button>
                     </Form>
                     <CardGroup>{this.state.resources.map(resource => ResourceCard(resource))}</CardGroup>
                 </div>
