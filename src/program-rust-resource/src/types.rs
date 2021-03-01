@@ -3,10 +3,11 @@ use borsh::{BorshDeserialize, BorshSerialize};
 pub const PUBLIC_KEY_SIZE: usize = 32;
 
 pub const INSTRUCTION_DEFAULT: u8 = 0;
-pub const INSTRUCTION_RECORD_RESOURCE_INSTANCE: u8 = 1;
-pub const INSTRUCTION_INITIATE_DISTRIBUTION: u8 = 2;
-pub const INSTRUCTION_RECORD_CHALLENGE: u8 = 3;
-pub const INSTRUCTION_CLAIM_CHALLENGE: u8 = 4;
+pub const INSTRUCTION_RECORD_INTENT: u8 = 1;
+pub const INSTRUCTION_RECORD_RESOURCE_INSTANCE: u8 = 2;
+pub const INSTRUCTION_INITIATE_DISTRIBUTION: u8 = 3;
+pub const INSTRUCTION_RECORD_CHALLENGE: u8 = 4;
+pub const INSTRUCTION_CLAIM_CHALLENGE: u8 = 5;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Copy, PartialEq, Debug, Default)]
 pub struct TrustTableEntry {
@@ -74,7 +75,9 @@ pub const MAX_NUM_CHALLENGES: usize = MAX_NUM_RECIPIENTS * MAX_NUM_RECIPIENTS;
 pub struct ResourceDatabase {
     pub is_distributed: bool,
     pub final_quantity: u8,
+    pub intents: [[u8; PUBLIC_KEY_SIZE]; MAX_NUM_RECIPIENTS],
     pub instances: [ResourceInstance; MAX_NUM_RESOURCE_INSTANCES],
     pub challenges: [Challenge; MAX_NUM_CHALLENGES],
     pub claims: [[u8; PUBLIC_KEY_SIZE]; MAX_NUM_RECIPIENTS]
 }
+pub const RESOURCE_DATABASE_SIZE: usize = 1430;

@@ -34,6 +34,25 @@ fn _process_instruction(
         ResourceInstruction::Default() => {
             info!("OK")
         }
+        ResourceInstruction::RecordIntent() => {
+            info!("recording intent");
+            let mut database_account_data = accounts[0].try_borrow_mut_data().unwrap();
+            let mut resource_database = ResourceDatabase::try_from_slice(&database_account_data).unwrap();
+
+            let empty_address = [0u8; PUBLIC_KEY_SIZE];
+            if accounts.len() != 2 || empty_address == accounts[1].key.to_bytes() {
+                return Err(ProgramError::InvalidInstructionData)
+            }
+
+            for key in resource_database.intents.iter_mut() {
+                if key == &empty_address {
+                    key.copy_from_slice(&accounts[1].key.to_bytes());
+                    database_account_data.copy_from_slice(&resource_database.try_to_vec().unwrap());
+                    return Ok(())
+                }
+            }
+            return Err(ProgramError::InvalidInstructionData)
+        }
         ResourceInstruction::RecordResourceInstance(resource_instance) => {
             info!("recording resource instance");
             let mut database_account_data = accounts[0].try_borrow_mut_data().unwrap();
@@ -159,12 +178,14 @@ mod test {
     use crate::{
         error::ResourceError,
         types::{
+            INSTRUCTION_RECORD_INTENT,
             INSTRUCTION_RECORD_RESOURCE_INSTANCE,
             INSTRUCTION_INITIATE_DISTRIBUTION,
             INSTRUCTION_RECORD_CHALLENGE,
             MAX_NUM_RESOURCE_INSTANCES,
             MAX_NUM_RECIPIENTS,
             MAX_NUM_CHALLENGES,
+            RESOURCE_DATABASE_SIZE,
             ResourceInstance,
             Challenge,
         }
@@ -175,7 +196,7 @@ mod test {
         let program_id = Pubkey::default();
         let key = Pubkey::default();
         let mut lamports = 0;
-        let mut data = vec![0u8; 1302];
+        let mut data = vec![0u8; RESOURCE_DATABASE_SIZE];
         let owner = Pubkey::default();
         let account = AccountInfo::new(
             &key,
@@ -200,16 +221,76 @@ mod test {
         };
     }
 
+
+    #[test]
+    fn test_record_intent() {
+        let program_id = Pubkey::default();
+        let key = Pubkey::new_unique();
+        let owner = Pubkey::default();
+
+        let mut database_data = vec![0u8; RESOURCE_DATABASE_SIZE];
+        let resource_database = ResourceDatabase {
+            is_distributed: false,
+            final_quantity: 0,
+            intents: [[0u8; PUBLIC_KEY_SIZE]; MAX_NUM_RECIPIENTS],
+            instances: [ResourceInstance{
+                from: [0u8; PUBLIC_KEY_SIZE],
+                quantity: 0,
+            }; MAX_NUM_RESOURCE_INSTANCES],
+            challenges: [Challenge{
+                from: [0u8; PUBLIC_KEY_SIZE],
+                to: [0u8; PUBLIC_KEY_SIZE],
+                value: false,
+            }; MAX_NUM_CHALLENGES],
+            claims: [[0u8; PUBLIC_KEY_SIZE]; MAX_NUM_RECIPIENTS],
+        };
+        database_data.copy_from_slice(&resource_database.try_to_vec().unwrap());
+        let mut database_lamports = 0;
+        let database_account = AccountInfo::new(
+            &key,
+            false,
+            true,
+            &mut database_lamports,
+            &mut database_data,
+            &owner,
+            false,
+            Epoch::default(),
+        );
+
+        let mut recipient_data = vec![0u8; 0];
+        let mut recipient_lamports = 0;
+        let recipient_account = AccountInfo::new(
+            &key,
+            false,
+            true,
+            &mut recipient_lamports,
+            &mut recipient_data,
+            &owner,
+            false,
+            Epoch::default(),
+        );
+        let accounts = vec![database_account, recipient_account];
+
+        let mut instruction_data: Vec<u8> = Vec::new();
+        instruction_data.push(INSTRUCTION_RECORD_INTENT);
+
+        let result = process_instruction(&program_id, &accounts, &instruction_data);
+        assert_eq!(result.unwrap(), ());
+        let resource_database = ResourceDatabase::try_from_slice(&database_data).unwrap();
+        assert_eq!(resource_database.intents[0], key.to_bytes());
+    }
+
     #[test]
     fn test_record_resource_instance() {
         let program_id = Pubkey::default();
         let key = Pubkey::default();
         let mut lamports = 0;
-        let mut data = vec![0u8; 1302];
+        let mut data = vec![0u8; RESOURCE_DATABASE_SIZE];
 
         let resource_database = ResourceDatabase {
             is_distributed: false,
             final_quantity: 0,
+            intents: [[0u8; PUBLIC_KEY_SIZE]; MAX_NUM_RECIPIENTS],
             instances: [ResourceInstance{
                 from: [0u8; PUBLIC_KEY_SIZE],
                 quantity: 0,
@@ -255,11 +336,12 @@ mod test {
         let program_id = Pubkey::default();
         let key = Pubkey::default();
         let mut lamports = 0;
-        let mut data = vec![0u8; 1302];
+        let mut data = vec![0u8; RESOURCE_DATABASE_SIZE];
 
         let resource_database = ResourceDatabase {
             is_distributed: false,
             final_quantity: 0,
+            intents: [[0u8; PUBLIC_KEY_SIZE]; MAX_NUM_RECIPIENTS],
             instances: [ResourceInstance{
                 from: [0u8; PUBLIC_KEY_SIZE],
                 quantity: 0,
@@ -312,12 +394,13 @@ mod test {
         let program_id = Pubkey::default();
         let key = Pubkey::default();
         let mut lamports = 0;
-        let mut data = vec![0u8; 1302];
+        let mut data = vec![0u8; RESOURCE_DATABASE_SIZE];
 
         let resource_database = ResourceDatabase {
             // set to true so we don't need a bunch of other setup
             is_distributed: true,
             final_quantity: 0,
+            intents: [[0u8; PUBLIC_KEY_SIZE]; MAX_NUM_RECIPIENTS],
             instances: [ResourceInstance{
                 from: [0u8; PUBLIC_KEY_SIZE],
                 quantity: 0,
