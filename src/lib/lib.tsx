@@ -11,7 +11,7 @@ import { Store, WrongInstanceError, KeyNotFoundError } from './util';
 import {
   IResourceAPI, ISearchEngine, ChallengeTable, Resource, ResourceInstance,
   Challenge, SearchEngineAccount, Location, SE_INSTRUCTION_UPDATE_ACCOUNT, SE_INSTRUCTION_REGISTER_RESOURCE,
-  ResourceIndex, SE_INSTRUCTION_REGISTER_INTENT, RESOURCE_INSTRUCTION_REGISTER_INTENT
+  ResourceIndex, SE_INSTRUCTION_REGISTER_INTENT, RESOURCE_INSTRUCTION_REGISTER_INTENT, ResourceDatabase
 } from './lib-types';
 import { toBorsh, toTyped, SEARCH_ENGINE_ACCOUNT_SPACE } from './lib-serialization';
 
@@ -46,6 +46,18 @@ export class ResourceAPI implements IResourceAPI {
         preflightCommitment: 'singleGossip',
       },
     );
+  }
+
+  async getDatabase(): Promise<ResourceDatabase> {
+    let accountInfo = await this.connection.getAccountInfo(this.resource.address);
+    if (accountInfo == null) {
+      throw new Error("NO ACCOUNT INFO FOUND");
+    }
+    let resourceDatabase: ResourceDatabase = toTyped(ResourceDatabase, accountInfo.data);
+    console.log(resourceDatabase);
+    // store in cache
+    // this.store.put(searchEngineAccount.account.publicKey.toBase58(), searchEngineAccount)
+    return new ResourceDatabase(false, 0, [], [], [], []);
   }
 
   async registerIntent(account: Account): Promise<void> {

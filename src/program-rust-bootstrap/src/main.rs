@@ -121,7 +121,7 @@ fn main() {
     let payer_keypair_file = matches.value_of("payer-keypair-file").unwrap();
     // search engine
     let searchengine_pubkey_file = matches.value_of("searchengine-pubkey-file").unwrap();
-    let searchengine_databaes_keypair_file = matches.value_of("searchengine-database-keypair-file").unwrap();
+    let searchengine_database_keypair_file = matches.value_of("searchengine-database-keypair-file").unwrap();
     // resource
     let resource_pubkey_file = matches.value_of("resource-pubkey-file").unwrap();
     let resource_database_keypair_file = matches.value_of("resource-database-keypair-file").unwrap();
@@ -131,7 +131,7 @@ fn main() {
             url.to_string(),
             payer_keypair_file.to_string(),
             searchengine_pubkey_file.to_string(),
-            searchengine_databaes_keypair_file.to_string(),
+            searchengine_database_keypair_file.to_string(),
             384),
         Some("bootstrap-resource-database") => bootstrap_database(
             url.to_string(),

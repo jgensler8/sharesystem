@@ -27,7 +27,10 @@ describe('serach engine', () => {
     database = await loadDatabaseAddressFromEnvironment();
     store = new Store();
     payerAccount = await loadAccountFromEnvironment();
-    searchEnginePayerAccount = new Account();
+    // stable customer account so both databases don't fill up
+    searchEnginePayerAccount = new Account(Uint8Array.from([
+      102,193,136,7,193,248,25,69,123,93,192,155,11,116,137,149,85,149,246,134,11,101,230,64,166,161,143,161,109,224,194,112,59,242,56,4,233,182,168,169,147,48,18,145,175,118,3,103,87,180,7,42,234,7,88,152,234,47,244,235,70,156,12,125
+    ]));
     resourceProgramAccount = await loadResourceAddressFromEnvironment();
     resourceProgramDatabaseAccount = await loadResourceDatabaseAddressFromEnvironment();
     location = new Location("94040");
@@ -52,16 +55,24 @@ describe('serach engine', () => {
   test('can create and read search engine account', async () => {
     await expect(system.getDefaultSearchEngineAccount()).rejects.toEqual(new KeyNotFoundError());
 
-    let createdAccount = await system.createDefaultSearchEngineAccount(searchEnginePayerAccount, "jeff");
+    let recreatedAccount = new Account();
+
+    let createdAccount = await system.createDefaultSearchEngineAccount(recreatedAccount, "jeff");
     let storedAccount = await system.getDefaultSearchEngineAccount();
     expect(createdAccount).toStrictEqual(storedAccount);
 
-    let detailsAccount = await system.getAccountDetails(searchEnginePayerAccount.publicKey);
+    let detailsAccount = await system.getAccountDetails(recreatedAccount.publicKey);
     expect(createdAccount).toStrictEqual(detailsAccount);
   });
 
   test('can read trust table', async () => {
-    // assumes account created already
+    // create account if it doesn't exist
+    // note that this account will be used if the test suite runs again
+    let details = await system.getAccountDetails(searchEnginePayerAccount.publicKey).catch(() => {})
+    if (!details) {
+      await system.createDefaultSearchEngineAccount(searchEnginePayerAccount, "stable")
+    }
+
     let defaultAccount = await system.getDefaultSearchEngineAccount();
     let entries = Array(MAX_TRUST_TABLE_SIZE).fill(new TrustTableEntry(new PublicKey("FFAAFFAAFFAABBCCAABBCCDDEEFFaabbccAABBCCDDEE"), 10));
     defaultAccount.trustTable = entries;
@@ -96,5 +107,9 @@ describe('serach engine', () => {
 
   test('can register intent', async () => {
     await resourceAPI.registerIntent(searchEnginePayerAccount);
+
+    let database = await resourceAPI.getDatabase();
+    expect(database.intents).toHaveLength(1);
+    expect(database.intents[0]).toEqual(searchEnginePayerAccount);
   });
 })

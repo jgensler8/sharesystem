@@ -1,5 +1,5 @@
 import { Account, PublicKey } from '@solana/web3.js';
-import { TrustTableEntry, SearchEngineAccount, Resource, Location, ResourceInstance, ResourceIndex } from './lib-types';
+import { TrustTableEntry, SearchEngineAccount, Resource, Location, ResourceInstance, ResourceIndex, Challenge, ResourceDatabase } from './lib-types';
 import { toBorsh, toTyped } from './lib-serialization';
 
 describe('borsh', () => {
@@ -50,5 +50,45 @@ describe('borsh', () => {
         const buffer = Buffer.from(arr);
         const typed = toTyped(ResourceIndex, buffer);
         expect(index).toStrictEqual(typed);
+    })
+
+    test('can deserialize Challenge', () => {
+        // true
+        let challenge = new Challenge(new Account().publicKey, new Account().publicKey, true);
+        const arr = toBorsh(challenge);
+        const buffer = Buffer.from(arr);
+        const typed = toTyped(Challenge, buffer);
+        expect(challenge).toStrictEqual(typed);
+
+        // false
+        let challenge_2 = new Challenge(new Account().publicKey, new Account().publicKey, false);
+        const arr_2 = toBorsh(challenge_2);
+        const buffer_2 = Buffer.from(arr_2);
+        const typed_2 = toTyped(Challenge, buffer_2);
+        expect(challenge_2).toStrictEqual(typed_2);
+    })
+
+    test('can deserialize ResourceInstance', () => {
+        let resourceInstance = new ResourceInstance(new Account().publicKey, 100);
+
+        const arr = toBorsh(resourceInstance);
+
+        const buffer = Buffer.from(arr);
+        const typed = toTyped(ResourceInstance, buffer);
+        expect(resourceInstance).toStrictEqual(typed);
+    })
+
+    test('can desserialize ResourceDatabase', () => {
+        let intents = [new Account().publicKey];
+        let instances = [new ResourceInstance(new Account().publicKey, 10)];
+        let challenges = [new Challenge(new Account().publicKey, new Account().publicKey, true)];
+        let claims = [new Account().publicKey];
+        let database = new ResourceDatabase(true, 10, intents, instances, challenges, claims);
+
+        const arr = toBorsh(database);
+
+        const buffer = Buffer.from(arr);
+        const typed = toTyped(ResourceDatabase, buffer);
+        expect(database).toStrictEqual(typed);
     })
 })

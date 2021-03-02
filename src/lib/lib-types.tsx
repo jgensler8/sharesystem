@@ -88,9 +88,11 @@ export class SearchEngineAccount {
 }
 
 export class ResourceInstance {
+  from: PublicKey;
   quantity: number;
 
-  constructor(quantity: number) {
+  constructor(from: PublicKey, quantity: number) {
+    this.from = from;
     this.quantity = quantity;
   }
 }
@@ -128,12 +130,32 @@ export class Resource {
   location: Location;
   address: PublicKey;
   trustThreshold: number;
-
+  
   constructor(name: string, location: Location, address: PublicKey, trustThreshold: number) {
     this.name = name;
     this.location = location;
     this.address = address;
     this.trustThreshold = trustThreshold;
+  }
+}
+
+export class ResourceDatabase {
+  isDistributed: boolean;
+  finalQuantity: number;
+  intents: Array<PublicKey>;
+  instances: Array<ResourceInstance>;
+  challenges: Array<Challenge>;
+  claims: Array<PublicKey>;
+
+  constructor(isDistributed: boolean, finalQuantity: number, intents: Array<PublicKey>,
+    instances: Array<ResourceInstance>, challenges: Array<Challenge>, claims: Array<PublicKey>)
+  { 
+    this.isDistributed = isDistributed;
+    this.finalQuantity = finalQuantity;
+    this.intents = intents;
+    this.instances = instances;
+    this.challenges = challenges;
+    this.claims = claims;
   }
 }
 
@@ -148,6 +170,8 @@ export class ResourceIndex {
 export interface IResourceAPI {
   
   healthCheck(): Promise<void>;
+
+  getDatabase(): Promise<ResourceDatabase>;
 
   /*
   Upload of a robot/human that X amount of resource exists, shold prove to other accounts that the resource is available

@@ -5,8 +5,12 @@
 
 import { PublicKey } from "@solana/web3.js";
 import { TextEncoder, TextDecoder } from "web-encoding";
-import { EMPTY_PUBLIC_KEY, DEFAULT_TRUST_TABLE_ENTRY, Location, MAX_TRUST_TABLE_SIZE, Resource, ResourceIndex, SearchEngineAccount, TrustTableEntry } from "./lib-types";
+import {
+    EMPTY_PUBLIC_KEY, DEFAULT_TRUST_TABLE_ENTRY, Location, MAX_TRUST_TABLE_SIZE,
+    Resource, ResourceIndex, SearchEngineAccount, TrustTableEntry, Challenge, ResourceInstance, ResourceDatabase
+} from "./lib-types";
 import { serialize, deserialize } from 'borsh';
+import { types } from "util";
 
 class BorshConstructable {
     constructor(properties: object) {
@@ -73,7 +77,42 @@ AllBorshSchemas.set(BorshResourceIndex, {
     ]
 })
 
+export class BorshResourceInstance extends BorshConstructable { }
+AllBorshSchemas.set(BorshResourceInstance, {
+    kind: 'struct',
+    fields: [
+        ['from', [PUBLIC_KEY_SIZE]],
+        ['quantity', 'u8'],
+    ]
+})
+const RESOURCE_INSTANCE_SPACE = PUBLIC_KEY_SIZE + 1;
 
+export class BorshChallenge extends BorshConstructable { }
+AllBorshSchemas.set(BorshChallenge, {
+    kind: 'struct',
+    fields: [
+        ['from', [PUBLIC_KEY_SIZE]],
+        ['to', [PUBLIC_KEY_SIZE]],
+        ['value', 'u8'],
+    ]
+})
+const CHALLENGE_SPACE = PUBLIC_KEY_SIZE + PUBLIC_KEY_SIZE + 1;
+
+const MAX_NUM_RECIPIENTS = 2;
+const MAX_NUM_RESOURCE_INSTANCES = MAX_NUM_RECIPIENTS;
+const MAX_NUM_CHALLENGES = MAX_NUM_RECIPIENTS * MAX_NUM_RECIPIENTS;
+export class BorshResourceDatabase extends BorshConstructable {}
+AllBorshSchemas.set(BorshResourceDatabase, {
+    kind: 'struct',
+    fields: [
+        ['isDistributed', 'u8'],
+        ['finalQuantity', 'u8'],
+        ['intents', [PUBLIC_KEY_SIZE * MAX_NUM_RECIPIENTS]],
+        ['instances', [RESOURCE_INSTANCE_SPACE * MAX_NUM_RESOURCE_INSTANCES]],
+        ['challenges', [CHALLENGE_SPACE * MAX_NUM_CHALLENGES]],
+        ['claims', [PUBLIC_KEY_SIZE * MAX_NUM_RECIPIENTS]],
+    ]
+})
 
 function paddedString(str: string, len: number): Uint8Array {
     let name = new Uint8Array(len);
@@ -162,6 +201,48 @@ function toBorsh(libObject: any): Uint8Array {
                 resources: resources,
             })
         );
+    } else if (libObject instanceof Challenge) {
+        return serialize(AllBorshSchemas, new BorshChallenge({
+            from: Uint8Array.from(libObject.fromAddress.toBuffer()),
+            to: Uint8Array.from(libObject.toAddress.toBuffer()),
+            value: libObject.accepted,
+        }));
+    } else if (libObject instanceof ResourceInstance) {
+        return serialize(AllBorshSchemas, new BorshResourceInstance({
+            from: Uint8Array.from(libObject.from.toBuffer()),
+            quantity: libObject.quantity,
+        }));
+    } else if (libObject instanceof ResourceDatabase) {
+        let intents = new Uint8Array(64);
+        libObject.intents.forEach((intent, index) => {
+            intents.set(Uint8Array.from(intent.toBuffer()), index * PUBLIC_KEY_SIZE)
+        });
+
+        let instances = new Uint8Array(66);
+        libObject.instances.forEach((instance, index) => {
+            let serialized = toBorsh(instance);
+            instances.set(serialized, index * RESOURCE_INSTANCE_SPACE);
+        })
+
+        let challeneges = new Uint8Array(260);
+        libObject.challenges.forEach((challenge, index) => {
+            let serialized = toBorsh(challenge);
+            challeneges.set(serialized, index * CHALLENGE_SPACE);
+        });
+
+        let claims = new Uint8Array(64);
+        libObject.claims.forEach((claim, index) => {
+            claims.set(Uint8Array.from(claim.toBuffer()), index * PUBLIC_KEY_SIZE)
+        });
+
+        return serialize(AllBorshSchemas, new BorshResourceDatabase({
+            isDistributed: libObject.isDistributed,
+            finalQuantity: libObject.finalQuantity,
+            intents: intents,
+            instances: instances,
+            challenges: challeneges,
+            claims: claims,
+        }));
     } else if (libObject === undefined) {
         throw new Error("undefined passed to toBorsh. This is probably from an assumption in a specific if-else block of toBorsh (arrays are certain size, certain fields set)");
     } else {
@@ -224,6 +305,51 @@ function toTyped(t: any, borshBuffer: Buffer): any {
         }
 
         return new ResourceIndex(map);
+    } else if (t === Challenge) {
+        let deserialized = deserialize(AllBorshSchemas, BorshChallenge, borshBuffer)
+        return new Challenge(new PublicKey(deserialized.from), new PublicKey(deserialized.to), deserialized.value ? true : false);
+    } else if (t === ResourceInstance) {
+        let deserialized = deserialize(AllBorshSchemas, BorshResourceInstance, borshBuffer);
+        return new ResourceInstance(new PublicKey(deserialized.from), deserialized.quantity);
+    } else if (t === ResourceDatabase) {
+        let deserialized = deserialize(AllBorshSchemas, BorshResourceDatabase, borshBuffer);
+        let intents = [];
+        let intentIndex = 0;
+        while(intentIndex < MAX_NUM_RECIPIENTS) {
+            let key = new PublicKey(deserialized.intents.slice(intentIndex*PUBLIC_KEY_SIZE, intentIndex*PUBLIC_KEY_SIZE + PUBLIC_KEY_SIZE));
+            if (key.toBase58() !== EMPTY_PUBLIC_KEY.toBase58()) {
+                intents.push(key);
+            }
+            intentIndex += 1;
+        }
+        let instances = [];
+        let instanceIndex = 0;
+        while(instanceIndex < MAX_NUM_RESOURCE_INSTANCES) {
+            let typed = toTyped(ResourceInstance, Buffer.from(deserialized.instances).slice(instanceIndex*RESOURCE_INSTANCE_SPACE, instanceIndex*RESOURCE_INSTANCE_SPACE + RESOURCE_INSTANCE_SPACE));
+            if (typed.from.toBase58() !== EMPTY_PUBLIC_KEY.toBase58()) {
+                instances.push(typed);
+            }
+            instanceIndex += 1;
+        }
+        let challenges = [];
+        let challengeIndex = 0;
+        while(challengeIndex < MAX_NUM_CHALLENGES) {
+            let typed = toTyped(Challenge, Buffer.from(deserialized.challenges).slice(challengeIndex*CHALLENGE_SPACE, challengeIndex*CHALLENGE_SPACE + CHALLENGE_SPACE));
+            if(typed.fromAddress.toBase58() !== EMPTY_PUBLIC_KEY.toBase58()){
+                challenges.push(typed);
+            }
+            challengeIndex += 1;
+        }
+        let claims = [];
+        let claimIndex = 0;
+        while(claimIndex < MAX_NUM_RECIPIENTS) {
+            let key = new PublicKey(deserialized.claims.slice(claimIndex*PUBLIC_KEY_SIZE, claimIndex*PUBLIC_KEY_SIZE + PUBLIC_KEY_SIZE));
+            if (key.toBase58() !== EMPTY_PUBLIC_KEY.toBase58()) {
+                claims.push(key);
+            }
+            claimIndex += 1;
+        }
+        return new ResourceDatabase(deserialized.isDistributed ? true : false, deserialized.finalQuantity, intents, instances, challenges, claims);
     } else {
         throw new Error("type not supported. add a custom Borsh object in lib-serialization. also make sure server side supports this type");
     }

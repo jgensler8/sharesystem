@@ -45,6 +45,10 @@ fn _process_instruction(
             }
 
             for key in resource_database.intents.iter_mut() {
+                if *key == accounts[1].key.to_bytes() {
+                    info!("intent already exists");
+                    return Ok(())
+                }
                 if key == &empty_address {
                     key.copy_from_slice(&accounts[1].key.to_bytes());
                     database_account_data.copy_from_slice(&resource_database.try_to_vec().unwrap());
