@@ -20,7 +20,12 @@ use crate::{
     },
     types::{
         PUBLIC_KEY_SIZE,
+        MAX_NUM_RECIPIENTS,
+        MAX_NUM_RESOURCE_INSTANCES,
+        MAX_NUM_CHALLENGES,
         ResourceDatabase,
+        ResourceInstance,
+        Challenge,
     },
 };
 
@@ -106,6 +111,22 @@ fn _process_instruction(
             }
             resource_database.final_quantity = final_quantity;
 
+            // initialize challenges
+            let mut challenge_index = 0;
+            for from_index in 0..resource_database.intents.len() {
+                for to_index in 0..resource_database.intents.len() {
+                    if from_index == to_index {
+                        continue
+                    }
+                    resource_database.challenges[challenge_index] = Challenge{
+                        from: resource_database.intents[from_index],
+                        to: resource_database.intents[to_index],
+                        value: false,
+                    };
+                    challenge_index += 1;
+                }
+            }
+
             // save data
             database_account_data.copy_from_slice(&resource_database.try_to_vec().unwrap());
             return Ok(())
@@ -150,6 +171,26 @@ fn _process_instruction(
         }
         ResourceInstruction::ClaimChallenge(_challenge) => {
             info!("would claim challenge");
+        }
+        ResourceInstruction::ResetDatabase() => {
+            let mut database_account_data = accounts[0].try_borrow_mut_data().unwrap();
+            let resource_database = ResourceDatabase {
+                is_distributed: false,
+                final_quantity: 0,
+                intents: [[0u8; PUBLIC_KEY_SIZE]; MAX_NUM_RECIPIENTS],
+                instances: [ResourceInstance{
+                    from: [0u8; PUBLIC_KEY_SIZE],
+                    quantity: 0,
+                }; MAX_NUM_RESOURCE_INSTANCES],
+                challenges: [Challenge{
+                    from: [0u8; PUBLIC_KEY_SIZE],
+                    to: [0u8; PUBLIC_KEY_SIZE],
+                    value: false,
+                }; MAX_NUM_CHALLENGES],
+                claims: [[0u8; PUBLIC_KEY_SIZE]; MAX_NUM_RECIPIENTS],
+            };
+            database_account_data.copy_from_slice(&resource_database.try_to_vec().unwrap());
+            return Ok(())
         }
     }
     Ok(())

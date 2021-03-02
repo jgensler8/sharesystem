@@ -8,6 +8,7 @@ pub const INSTRUCTION_RECORD_RESOURCE_INSTANCE: u8 = 2;
 pub const INSTRUCTION_INITIATE_DISTRIBUTION: u8 = 3;
 pub const INSTRUCTION_RECORD_CHALLENGE: u8 = 4;
 pub const INSTRUCTION_CLAIM_CHALLENGE: u8 = 5;
+pub const INSTRUCTION_RESET_DATABASE: u8 = 6;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Copy, PartialEq, Debug, Default)]
 pub struct TrustTableEntry {

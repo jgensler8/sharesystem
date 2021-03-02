@@ -101,7 +101,7 @@ const CHALLENGE_SPACE = PUBLIC_KEY_SIZE + PUBLIC_KEY_SIZE + 1;
 const MAX_NUM_RECIPIENTS = 2;
 const MAX_NUM_RESOURCE_INSTANCES = MAX_NUM_RECIPIENTS;
 const MAX_NUM_CHALLENGES = MAX_NUM_RECIPIENTS * MAX_NUM_RECIPIENTS;
-export class BorshResourceDatabase extends BorshConstructable {}
+export class BorshResourceDatabase extends BorshConstructable { }
 AllBorshSchemas.set(BorshResourceDatabase, {
     kind: 'struct',
     fields: [
@@ -145,21 +145,21 @@ function toBorsh(libObject: any): Uint8Array {
         let trustTableEntryIndex = 0;
         let trustTableEntries = new Uint8Array();
         // TODO can probably replace this with .set(..., index * size)
-        while(trustTableEntryIndex < libObject.trustTable.length) {
+        while (trustTableEntryIndex < libObject.trustTable.length) {
             let serialized = toBorsh(libObject.trustTable[trustTableEntryIndex]);
             trustTableEntries = Uint8Array.from([...trustTableEntries, ...serialized]);
-            trustTableEntryIndex +=1;
+            trustTableEntryIndex += 1;
         }
-        while(trustTableEntryIndex < MAX_TRUST_TABLE_SIZE) {
+        while (trustTableEntryIndex < MAX_TRUST_TABLE_SIZE) {
             let serialized = toBorsh(DEFAULT_TRUST_TABLE_ENTRY);
             trustTableEntries = Uint8Array.from([...trustTableEntries, ...serialized]);
-            trustTableEntryIndex +=1;
+            trustTableEntryIndex += 1;
         }
 
         let intents = new Uint8Array(96);
         let intentIndex = 0;
-        while(intentIndex < MAX_NUM_INTENTS) {
-            if(intentIndex >= libObject.intents.length) {
+        while (intentIndex < MAX_NUM_INTENTS) {
+            if (intentIndex >= libObject.intents.length) {
                 break;
             }
             intents.set(Uint8Array.from(libObject.intents[intentIndex].toBuffer()), intentIndex * PUBLIC_KEY_SIZE);
@@ -195,7 +195,7 @@ function toBorsh(libObject: any): Uint8Array {
             })
             bucketIndex += 1;
         })
-        
+
         return serialize(AllBorshSchemas,
             new BorshResourceIndex({
                 resources: resources,
@@ -260,13 +260,13 @@ function toTyped(t: any, borshBuffer: Buffer): any {
         // TODO: iterative over buffer and deserialze individual elements
         let trustTableEntry = toTyped(TrustTableEntry, Buffer.from(deserialized.trustTable));
         let trustTable = [];
-        if(trustTableEntry.id.toBase58() !== DEFAULT_TRUST_TABLE_ENTRY.id.toBase58()) {
+        if (trustTableEntry.id.toBase58() !== DEFAULT_TRUST_TABLE_ENTRY.id.toBase58()) {
             trustTable.push(trustTableEntry);
         }
 
         let intentIndex = 0;
         let intents = [];
-        while(intentIndex < MAX_NUM_INTENTS) {
+        while (intentIndex < MAX_NUM_INTENTS) {
             let key = new PublicKey(deserialized.intents.slice(intentIndex * PUBLIC_KEY_SIZE, intentIndex * PUBLIC_KEY_SIZE + PUBLIC_KEY_SIZE));
             if (key.toBase58() !== EMPTY_PUBLIC_KEY.toBase58()) {
                 intents.push(key);
@@ -282,17 +282,17 @@ function toTyped(t: any, borshBuffer: Buffer): any {
     } else if (t === ResourceIndex) {
         let bucketIndex = 0;
         let map = new Map<Location, Array<PublicKey>>();
-        while(bucketIndex < MAX_INDEX_BUCKETS) {
+        while (bucketIndex < MAX_INDEX_BUCKETS) {
             let bucketOffset = bucketIndex * BUCKET_SPACE;
             let zip = borshBuffer.slice(bucketOffset, MAX_ZIP_SIZE);
-            if(!zip.length){
+            if (!zip.length) {
                 bucketIndex += 1;
                 continue;
             }
             let location = new Location(decodeAndUnescape(zip))
             let bucket = [];
             let bucketValueIndex = 0;
-            while(bucketValueIndex < MAX_NUM_RESOURCE_IN_BUCKET) {
+            while (bucketValueIndex < MAX_NUM_RESOURCE_IN_BUCKET) {
                 let addressOffset = bucketOffset + MAX_ZIP_SIZE + (bucketValueIndex * PUBLIC_KEY_SIZE);
                 let key = new PublicKey(borshBuffer.slice(addressOffset, addressOffset + PUBLIC_KEY_SIZE))
                 if (key.toBase58() !== EMPTY_PUBLIC_KEY.toBase58()) {
@@ -315,8 +315,8 @@ function toTyped(t: any, borshBuffer: Buffer): any {
         let deserialized = deserialize(AllBorshSchemas, BorshResourceDatabase, borshBuffer);
         let intents = [];
         let intentIndex = 0;
-        while(intentIndex < MAX_NUM_RECIPIENTS) {
-            let key = new PublicKey(deserialized.intents.slice(intentIndex*PUBLIC_KEY_SIZE, intentIndex*PUBLIC_KEY_SIZE + PUBLIC_KEY_SIZE));
+        while (intentIndex < MAX_NUM_RECIPIENTS) {
+            let key = new PublicKey(deserialized.intents.slice(intentIndex * PUBLIC_KEY_SIZE, intentIndex * PUBLIC_KEY_SIZE + PUBLIC_KEY_SIZE));
             if (key.toBase58() !== EMPTY_PUBLIC_KEY.toBase58()) {
                 intents.push(key);
             }
@@ -324,8 +324,8 @@ function toTyped(t: any, borshBuffer: Buffer): any {
         }
         let instances = [];
         let instanceIndex = 0;
-        while(instanceIndex < MAX_NUM_RESOURCE_INSTANCES) {
-            let typed = toTyped(ResourceInstance, Buffer.from(deserialized.instances).slice(instanceIndex*RESOURCE_INSTANCE_SPACE, instanceIndex*RESOURCE_INSTANCE_SPACE + RESOURCE_INSTANCE_SPACE));
+        while (instanceIndex < MAX_NUM_RESOURCE_INSTANCES) {
+            let typed = toTyped(ResourceInstance, Buffer.from(deserialized.instances).slice(instanceIndex * RESOURCE_INSTANCE_SPACE, instanceIndex * RESOURCE_INSTANCE_SPACE + RESOURCE_INSTANCE_SPACE));
             if (typed.from.toBase58() !== EMPTY_PUBLIC_KEY.toBase58()) {
                 instances.push(typed);
             }
@@ -333,17 +333,17 @@ function toTyped(t: any, borshBuffer: Buffer): any {
         }
         let challenges = [];
         let challengeIndex = 0;
-        while(challengeIndex < MAX_NUM_CHALLENGES) {
-            let typed = toTyped(Challenge, Buffer.from(deserialized.challenges).slice(challengeIndex*CHALLENGE_SPACE, challengeIndex*CHALLENGE_SPACE + CHALLENGE_SPACE));
-            if(typed.fromAddress.toBase58() !== EMPTY_PUBLIC_KEY.toBase58()){
+        while (challengeIndex < MAX_NUM_CHALLENGES) {
+            let typed = toTyped(Challenge, Buffer.from(deserialized.challenges).slice(challengeIndex * CHALLENGE_SPACE, challengeIndex * CHALLENGE_SPACE + CHALLENGE_SPACE));
+            if (typed.fromAddress.toBase58() !== EMPTY_PUBLIC_KEY.toBase58()) {
                 challenges.push(typed);
             }
             challengeIndex += 1;
         }
         let claims = [];
         let claimIndex = 0;
-        while(claimIndex < MAX_NUM_RECIPIENTS) {
-            let key = new PublicKey(deserialized.claims.slice(claimIndex*PUBLIC_KEY_SIZE, claimIndex*PUBLIC_KEY_SIZE + PUBLIC_KEY_SIZE));
+        while (claimIndex < MAX_NUM_RECIPIENTS) {
+            let key = new PublicKey(deserialized.claims.slice(claimIndex * PUBLIC_KEY_SIZE, claimIndex * PUBLIC_KEY_SIZE + PUBLIC_KEY_SIZE));
             if (key.toBase58() !== EMPTY_PUBLIC_KEY.toBase58()) {
                 claims.push(key);
             }

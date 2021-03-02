@@ -9,9 +9,10 @@ import {
 } from '@solana/web3.js';
 import { Store, WrongInstanceError, KeyNotFoundError } from './util';
 import {
-  IResourceAPI, ISearchEngine, ChallengeTable, Resource, ResourceInstance,
+  IResourceAPI, ISearchEngine, Resource, ResourceInstance,
   Challenge, SearchEngineAccount, Location, SE_INSTRUCTION_UPDATE_ACCOUNT, SE_INSTRUCTION_REGISTER_RESOURCE,
-  ResourceIndex, SE_INSTRUCTION_REGISTER_INTENT, RESOURCE_INSTRUCTION_REGISTER_INTENT, ResourceDatabase, RESOURCE_INSTRUCTION_RECORD_RESOURCE_INSTANCE
+  ResourceIndex, SE_INSTRUCTION_REGISTER_INTENT, RESOURCE_INSTRUCTION_REGISTER_INTENT, ResourceDatabase,
+  RESOURCE_INSTRUCTION_RECORD_RESOURCE_INSTANCE, RESOURCE_INSTRUCTION_RESET_DATABASE, RESOURCE_INSTRUCTION_INITIATE_DISTRIBUTION,
 } from './lib-types';
 import { toBorsh, toTyped, SEARCH_ENGINE_ACCOUNT_SPACE } from './lib-serialization';
 
@@ -108,33 +109,29 @@ export class ResourceAPI implements IResourceAPI {
   }
 
   async initiateDistribution(): Promise<void> {
-    // should create challenges matrix for everyone
-
-    // let mut is_being_distributed: boolean = some_borsh_call::read_bool(&data)
-    // is_being_distributed = true
-
-    // kick out accounts with intent that don't satisfy trust from resource owner -> intent
-    // owners_table = contrant.trust_table[contract.owner]
-    // for address in contract.trust_table
-    //   if address not in owners_table
-    //     contract.trust_table[address] = null
-
-    // Note: can use some more sophisticated algorithm to decide how many there are
-    // let expected_resources = average(resource_record_instances)
-    // let mut resources_per_intent: uint = expected_resources / len(contract.intent_array)
+    let instruction = new Uint8Array([RESOURCE_INSTRUCTION_INITIATE_DISTRIBUTION]);
+    const transaction = new Transaction().add(
+      new TransactionInstruction({
+        keys: [
+          { pubkey: this.databaseId, isSigner: false, isWritable: true },
+        ],
+        programId: this.resource.address,
+        data: Buffer.from(instruction),
+      }),
+    );
+    await sendAndConfirmTransaction(
+      this.connection,
+      transaction,
+      [this.payerAccount],
+      {
+        commitment: 'singleGossip',
+        preflightCommitment: 'singleGossip',
+      },
+    );
   }
 
-  async listChallenges(): Promise<ChallengeTable> {
-    // let mut is_being_distributed: boolean = some_borsh_call::read_bool(&data)
-    // if is_being_distributed == false
-    //    return
-
-    // let mut challenges: []Challenge = some_borsh_call::read_array(&data)
-    // return challenges
-    return new ChallengeTable([
-      new Challenge(new PublicKey("4RmyNU1MCKkqLa6sHs8CC75gXrXaBw6mH9Z3ApkEkJvn"), new PublicKey("2X2sFvM3G8GGzDq2whqTbxFPGyv7U4PRomL8G8LJm3Y6"), false),
-      new Challenge(new PublicKey("2X2sFvM3G8GGzDq2whqTbxFPGyv7U4PRomL8G8LJm3Y6"), new PublicKey("4RmyNU1MCKkqLa6sHs8CC75gXrXaBw6mH9Z3ApkEkJvn"), false)
-    ])
+  async listChallenges(): Promise<Array<Challenge>> {
+    return await (await this.getDatabase()).challenges;
   }
 
   async approveChallenge(challenege: Challenge): Promise<void> {
@@ -158,6 +155,28 @@ export class ResourceAPI implements IResourceAPI {
     // if trust_score > contract.min_trust_score
     //   contract.claim_table[req.from] = true
     //   contract.inventory_available -= 
+  }
+
+  async resetDatabase() {
+    let instruction = new Uint8Array([RESOURCE_INSTRUCTION_RESET_DATABASE]);
+    const transaction = new Transaction().add(
+      new TransactionInstruction({
+        keys: [
+          { pubkey: this.databaseId, isSigner: false, isWritable: true },
+        ],
+        programId: this.resource.address,
+        data: Buffer.from(instruction),
+      }),
+    );
+    await sendAndConfirmTransaction(
+      this.connection,
+      transaction,
+      [this.payerAccount],
+      {
+        commitment: 'singleGossip',
+        preflightCommitment: 'singleGossip',
+      },
+    );
   }
 }
 
@@ -312,7 +331,7 @@ export class SearchEngineAPI implements ISearchEngine {
 
   async getResourceIndex(): Promise<ResourceIndex> {
     let databaseInfo = await this.connection.getAccountInfo(this.databaseId);
-    if(databaseInfo == null) {
+    if (databaseInfo == null) {
       throw new Error("NO DATABASE DATA FOUND");
     }
     return toTyped(ResourceIndex, databaseInfo.data);
@@ -323,7 +342,7 @@ export class SearchEngineAPI implements ISearchEngine {
     let unresolvedResources: Array<Resource> = [];
 
     // query for all resources
-    if(location.zip.trim().length === 0) {
+    if (location.zip.trim().length === 0) {
       allResources.resources.forEach((bucket, location_zip, map) => {
         let unresolvedBucketResources = bucket.map(id => new Resource("unknown", new Location(location_zip), id, 0));
         unresolvedResources = unresolvedResources.concat(unresolvedBucketResources);
@@ -333,7 +352,7 @@ export class SearchEngineAPI implements ISearchEngine {
 
     // query for specific resources
     let locationResources = allResources.resources.get(location.zip);
-    for(let id of locationResources || []) {
+    for (let id of locationResources || []) {
       unresolvedResources.push(new Resource("unknown", location, id, 0))
     }
     return unresolvedResources;
@@ -345,8 +364,8 @@ export class SearchEngineAPI implements ISearchEngine {
       new TransactionInstruction({
         keys: [
           { pubkey: this.databaseId, isSigner: false, isWritable: false },
-          { pubkey: account.publicKey, isSigner: false, isWritable: true},
-          { pubkey: resource, isSigner: false, isWritable: false},
+          { pubkey: account.publicKey, isSigner: false, isWritable: true },
+          { pubkey: resource, isSigner: false, isWritable: false },
         ],
         programId: this.programId,
         data: Buffer.from(instruction),

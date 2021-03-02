@@ -59,6 +59,7 @@ export const RESOURCE_INSTRUCTION_RECORD_RESOURCE_INSTANCE = 2;
 export const RESOURCE_INSTRUCTION_INITIATE_DISTRIBUTION = 3;
 export const RESOURCE_INSTRUCTION_RECORD_CHALLENGE = 4;
 export const RESOURCE_INSTRUCTION_CLAIM_CHALLENGE = 5;
+export const RESOURCE_INSTRUCTION_RESET_DATABASE = 6;
 
 export let EMPTY_PUBLIC_KEY = new PublicKey(new Uint8Array(32));
 
@@ -109,14 +110,6 @@ export class Challenge {
   }
 }
 
-export class ChallengeTable {
-  entries: Array<Challenge>
-
-  constructor(entries: Array<Challenge>) {
-    this.entries = entries;
-  }
-}
-
 export class Location {
   zip: string;
 
@@ -130,7 +123,7 @@ export class Resource {
   location: Location;
   address: PublicKey;
   trustThreshold: number;
-  
+
   constructor(name: string, location: Location, address: PublicKey, trustThreshold: number) {
     this.name = name;
     this.location = location;
@@ -148,8 +141,7 @@ export class ResourceDatabase {
   claims: Array<PublicKey>;
 
   constructor(isDistributed: boolean, finalQuantity: number, intents: Array<PublicKey>,
-    instances: Array<ResourceInstance>, challenges: Array<Challenge>, claims: Array<PublicKey>)
-  { 
+    instances: Array<ResourceInstance>, challenges: Array<Challenge>, claims: Array<PublicKey>) {
     this.isDistributed = isDistributed;
     this.finalQuantity = finalQuantity;
     this.intents = intents;
@@ -168,7 +160,7 @@ export class ResourceIndex {
 }
 
 export interface IResourceAPI {
-  
+
   healthCheck(): Promise<void>;
 
   getDatabase(): Promise<ResourceDatabase>;
@@ -190,7 +182,7 @@ export interface IResourceAPI {
       * require input
       * request other's input
   */
-  listChallenges(): Promise<ChallengeTable>;
+  listChallenges(): Promise<Array<Challenge>>;
 
   /*
   approve a challenge to increase challenge trust level and (hopefully/eventually) enable the resource to be claimed

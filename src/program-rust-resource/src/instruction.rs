@@ -5,6 +5,7 @@ use crate::types::{
     INSTRUCTION_INITIATE_DISTRIBUTION,
     INSTRUCTION_RECORD_CHALLENGE,
     INSTRUCTION_CLAIM_CHALLENGE,
+    INSTRUCTION_RESET_DATABASE,
     ResourceInstance,
     Challenge,
 };
@@ -21,7 +22,8 @@ pub enum ResourceInstruction {
     RecordResourceInstance(ResourceInstance),
     InitiateDistribution(),
     RecordChallenge(Challenge),
-    ClaimChallenge(Challenge)
+    ClaimChallenge(Challenge),
+    ResetDatabase()
 }
 
 impl ResourceInstruction {
@@ -60,6 +62,9 @@ impl ResourceInstruction {
                         return Err(ProgramError::InvalidInstructionData)
                     }
                 }
+            }
+            INSTRUCTION_RESET_DATABASE => {
+                Self::ResetDatabase()
             }
             _ => return Err(InvalidInstruction.into()),
         })
