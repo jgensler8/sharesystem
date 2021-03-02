@@ -49,15 +49,13 @@ export class ResourceAPI implements IResourceAPI {
   }
 
   async getDatabase(): Promise<ResourceDatabase> {
-    let accountInfo = await this.connection.getAccountInfo(this.resource.address);
+    let accountInfo = await this.connection.getAccountInfo(this.databaseId);
     if (accountInfo == null) {
       throw new Error("NO ACCOUNT INFO FOUND");
     }
-    let resourceDatabase: ResourceDatabase = toTyped(ResourceDatabase, accountInfo.data);
-    console.log(resourceDatabase);
     // store in cache
     // this.store.put(searchEngineAccount.account.publicKey.toBase58(), searchEngineAccount)
-    return new ResourceDatabase(false, 0, [], [], [], []);
+    return toTyped(ResourceDatabase, accountInfo.data);
   }
 
   async registerIntent(account: Account): Promise<void> {

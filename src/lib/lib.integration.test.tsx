@@ -110,6 +110,6 @@ describe('serach engine', () => {
 
     let database = await resourceAPI.getDatabase();
     expect(database.intents).toHaveLength(1);
-    expect(database.intents[0]).toEqual(searchEnginePayerAccount);
+    expect(database.intents[0]).toEqual(searchEnginePayerAccount.publicKey);
   });
 })
