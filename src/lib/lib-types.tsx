@@ -1,5 +1,4 @@
 import { PublicKey, Account } from "@solana/web3.js";
-import { timingSafeEqual } from "mz/crypto";
 /*
 Memory Structures
 

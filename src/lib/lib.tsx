@@ -290,6 +290,7 @@ export class SearchEngineAPI implements ISearchEngine {
   }
 
   async listIntents(account: Account): Promise<Array<PublicKey>> {
-    return [];
+    let details = await this.getAccountDetails(account.publicKey);
+    return details.intents;
   }
 }

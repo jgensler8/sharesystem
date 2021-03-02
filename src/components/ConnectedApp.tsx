@@ -4,7 +4,8 @@ import { Card, Button, CardGroup, Table, Form, Alert } from 'react-bootstrap';
 import { Account, PublicKey } from '@solana/web3.js';
 
 type ConnectedAppProps = {
-    system: ISearchEngine
+    system: ISearchEngine,
+    searchEnginePayerAccount: Account,
 }
 
 export type ConnectedAppState = {
@@ -12,11 +13,12 @@ export type ConnectedAppState = {
     error?: Error,
 
     system: ISearchEngine,
+    searchEnginePayerAccount: Account,
 
     trustTable: Array<TrustTableEntry>,
 
     resources: Array<Resource>,
-    intents: Array<Resource>,
+    intents: Array<PublicKey>,
     challenges: Array<Challenge>,
     claims: Array<Resource>,
 }
@@ -60,24 +62,30 @@ function TrustTableForm(trustTable: Array<TrustTableEntry>, onSubmit: any) {
     </Form>
 }
 
-function ResourceCard(resource: Resource) {
+function ResourceCard(resource: Resource, registerIntent: any) {
     return <Card style={{ width: '18rem' }} key={resource.address.toBase58()}>
         <Card.Body>
             <Card.Title>{resource.name}</Card.Title>
             <Card.Subtitle className="mb-2 text-muted">{resource.location.zip}</Card.Subtitle>
             <Card.Text>trust threshold: {resource.trustThreshold}</Card.Text>
+            <Form onSubmit={registerIntent}>
+                <Form.Group controlId="resource.intentForm">
+                    <Form.Control hidden name="id" type="text" defaultValue={resource.address.toBase58()} />
+                    <Button type="submit">Register Intent</Button>
+                </Form.Group>
+            </Form>
             <Card.Link href={"https://explorer.solana.com/address/" + resource.address.toBase58()}>View on Solana Explorer</Card.Link>
         </Card.Body>
     </Card>
 }
 
-function IntentCard(resource: Resource) {
-    <Card style={{ width: '18rem' }} key={resource.address.toBase58()}>
+function IntentCard(intent: PublicKey) {
+    return <Card style={{ width: '18rem' }} key={intent.toBase58()}>
         <Card.Body>
-            <Card.Title>{resource.name}</Card.Title>
-            <Card.Subtitle className="mb-2 text-muted">{resource.location.zip}</Card.Subtitle>
-            <Card.Text>trust threshold: {resource.trustThreshold}</Card.Text>
-            <Card.Link href={"https://explorer.solana.com/address/" + resource.address.toBase58()}>View on Solana Explorer</Card.Link>
+            <Card.Title>Unknown</Card.Title>
+            <Card.Subtitle className="mb-2 text-muted">unknown</Card.Subtitle>
+            <Card.Text>trust threshold: unknown</Card.Text>
+            <Card.Link href={"https://explorer.solana.com/address/" + intent.toBase58()}>View on Solana Explorer</Card.Link>
         </Card.Body>
     </Card>
 }
@@ -119,14 +127,16 @@ export class ConnectedApp extends React.Component<ConnectedAppProps, ConnectedAp
             system: props.system,
 
             trustTable: [new TrustTableEntry(new Account().publicKey, 10)],
+            searchEnginePayerAccount: props.searchEnginePayerAccount,
 
-            resources: [new Resource("Mr Farmer Potato", new Location("94040"), new Account().publicKey, 100), new Resource("Mr Farmer Potato", new Location("94040"), new Account().publicKey, 100)],
+            resources: [],
             intents: [],
             challenges: [new Challenge(new Account().publicKey, new Account().publicKey, false), new Challenge(new Account().publicKey, new Account().publicKey, false)],
             claims: [new Resource("Mr Farmer Potato", new Location("94040"), new Account().publicKey, 100)]
         };
         
         this.onSearch = this.onSearch.bind(this);
+        this.onRegisterIntent = this.onRegisterIntent.bind(this);
     }
 
     onTrustTableUpdate(e: React.SyntheticEvent) {
@@ -158,24 +168,35 @@ export class ConnectedApp extends React.Component<ConnectedAppProps, ConnectedAp
         })
     }
 
+    onRegisterIntent(e: React.SyntheticEvent) {
+        console.log("would record intent")
+        e.preventDefault()
+        const t = e.target as typeof e.target & {
+            id: {value: string}
+        };
+        const resourcePubkey = new PublicKey(t.id.value);
+        this.state.system.registerIntent(this.state.searchEnginePayerAccount, resourcePubkey).then(() => {
+            console.log("successful")
+            this.asyncLoadAndUpdateState();
+        })
+    }
+
     async asyncLoadAll(): Promise<ConnectedAppState> {
         console.log("loading indexes");
 
         let resources = await this.state.system.listResources(new Location("94040"));
         console.log(resources);
-        let se_account = await this.state.system.getDefaultSearchEngineAccount();
-        console.log(se_account);
-        let intents = await this.state.system.listIntents(se_account);
+        let intents = await this.state.system.listIntents(this.state.searchEnginePayerAccount);
         console.log(intents);
 
         return {
             ...this.state,
             resources: resources,
-            // intents: intents,
+            intents: intents,
         };
     }
 
-    componentDidMount() {
+    async asyncLoadAndUpdateState(): Promise<void> {
         this.asyncLoadAll()
             .then((state: ConnectedAppState) => {
                 if(this._async_cancel){
@@ -189,6 +210,10 @@ export class ConnectedApp extends React.Component<ConnectedAppProps, ConnectedAp
                 }
                 this.setState({ error: error, loading: false })
             })
+    }
+
+    componentDidMount() {
+        this.asyncLoadAndUpdateState();
     }
 
     componentWillUnmount() {
@@ -220,11 +245,14 @@ export class ConnectedApp extends React.Component<ConnectedAppProps, ConnectedAp
                     {
                         this.state.resources.length === 0 ? <Alert variant="warning">No Search Results</Alert> : <div></div>
                     }
-                    <CardGroup>{this.state.resources.map(resource => ResourceCard(resource))}</CardGroup>
+                    <CardGroup>{this.state.resources.map(resource => ResourceCard(resource, this.onRegisterIntent))}</CardGroup>
                 </div>
                 <div style={{paddingTop: '75px'}}>
                     <h1>Intents</h1>
-                    <CardGroup>{this.state.intents.map(resource => IntentCard(resource))}</CardGroup>
+                    {
+                        this.state.intents.length === 0 ? <Alert variant="warning">No Intents</Alert> : <div></div>
+                    }
+                    <CardGroup>{this.state.intents.map(intent => IntentCard(intent))}</CardGroup>
                 </div>
                 <div style={{paddingTop: '75px'}}> 
                     <h1>Challenges</h1>

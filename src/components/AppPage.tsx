@@ -13,8 +13,8 @@ function AppPage() {
                 return <Alert variant="info">
                     loading...
                 </Alert>
-            } else if (state.system) {
-                return <ConnectedAppState system={state.system}></ConnectedAppState>
+            } else if (state.system && state.searchEnginePayerAccount) {
+                return <ConnectedAppState system={state.system} searchEnginePayerAccount={state.searchEnginePayerAccount}></ConnectedAppState>
             }
             return <div></div>
         }}/>

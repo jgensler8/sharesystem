@@ -20,7 +20,7 @@ export class MockSearchEngineAPI implements ISearchEngine {
     async healthCheck(): Promise<void> { }
 
     async createDefaultSearchEngineAccount(account: Account, friendlyName: string): Promise<SearchEngineAccount> {
-        let searchEngineAccount = new SearchEngineAccount(friendlyName, []);
+        let searchEngineAccount = new SearchEngineAccount(friendlyName, [], []);
         this.store.put(this.ACCOUNT_KEY, searchEngineAccount)
         return searchEngineAccount;
     }
@@ -51,7 +51,7 @@ export class MockSearchEngineAPI implements ISearchEngine {
         } catch (error) {
             if (error instanceof KeyNotFoundError) {
                 // read from chain
-                let searchEngineAccount = new SearchEngineAccount("test_" + randomInt(10000), []);
+                let searchEngineAccount = new SearchEngineAccount("test_" + randomInt(10000), [], []);
                 // store in cache
                 this.store.put(address.toBase58(), searchEngineAccount)
                 return searchEngineAccount;

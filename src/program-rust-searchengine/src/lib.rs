@@ -72,6 +72,10 @@ fn _process_instruction(
                 }
                 if bucket.location.zip == location.zip {
                     for bucket_address in bucket.addresses.iter_mut() {
+                        if *bucket_address == address {
+                            info!("resource already exists");
+                            return Ok(())
+                        }
                         if *bucket_address == empty_address {
                             bucket_address.copy_from_slice(&address);
                             // save data
@@ -99,7 +103,7 @@ fn _process_instruction(
                 }
             }
             if !found {
-                info!("Resource Not Registered");
+                info!("resource not registered");
                 return Err(ProgramError::from(ResourceNotRegistered))
             }
             
@@ -110,6 +114,7 @@ fn _process_instruction(
             let mut account = SearchEngineAccount::try_from_slice(&account_data).unwrap();
             for id in account.intents.iter_mut() {
                 if *id == resource_data_key_bytes {
+                    info!("intent already exists");
                     // already recorded
                     break;
                 }

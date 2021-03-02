@@ -64,13 +64,6 @@ describe('serach engine', () => {
     expect(defaultAccount).toStrictEqual(storedAccount);
   })
 
-  test('can register intent', async () => {
-    await system.registerIntent(searchEnginePayerAccount, resourceProgramAccount.publicKey);
-
-    let storedAccount = await system.getAccountDetails(searchEnginePayerAccount.publicKey);
-    expect(storedAccount.intents).toHaveLength(1);
-  });
-
   test('can register resource', async () => {
     let resource = new Resource("potato", location, resourceProgramAccount.publicKey, 10);
     await system.registerResource(resource).catch(err => {});
@@ -79,5 +72,12 @@ describe('serach engine', () => {
     expect(index.resources.has(location.zip)).toEqual(true);
     expect(index.resources.get(location.zip)).toContainEqual(resourceProgramAccount.publicKey);
   })
+  
+  test('can register intent', async () => {
+    await system.registerIntent(searchEnginePayerAccount, resourceProgramAccount.publicKey);
+
+    let storedAccount = await system.getAccountDetails(searchEnginePayerAccount.publicKey);
+    expect(storedAccount.intents).toHaveLength(1);
+  });
 
 })

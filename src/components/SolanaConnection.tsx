@@ -14,6 +14,7 @@ export type SolanaConnectionState = {
     loading: boolean,
     error?: Error,
     system?: ISearchEngine,
+    searchEnginePayerAccount?: Account,
 }
 
 export class SolanaConnection extends React.Component<SolanaConnectionProps, SolanaConnectionState> {
@@ -37,11 +38,11 @@ export class SolanaConnection extends React.Component<SolanaConnectionProps, Sol
             let payerAccount = await loadAccountFromEnvironment();
             let databaseAccount = await loadDatabaseAddressFromEnvironment();
 
-            system = new SearchEngineAPI(connection, searchEngineProgramId, databaseAccount.publicKey, new Store(), payerAccount);    
-
-            await system.createDefaultSearchEngineAccount(new Account(), "default");
+            system = new SearchEngineAPI(connection, searchEngineProgramId, databaseAccount.publicKey, new Store(), payerAccount);
         }
-        return {...this.state, system: system, loading: false}
+        let searchEnginePayerAccount = new Account();
+        await system.createDefaultSearchEngineAccount(searchEnginePayerAccount, "default");
+        return {...this.state, system: system, searchEnginePayerAccount: searchEnginePayerAccount, loading: false}
     }
 
     componentDidMount() {
