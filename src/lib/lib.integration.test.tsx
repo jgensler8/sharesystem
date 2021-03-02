@@ -161,10 +161,15 @@ describe('serach engine', () => {
   })
 
   test('approve challenge', async () => {
+    await resourceAPI.approveChallenge(new Challenge(searchEnginePayerAccount.publicKey, secondSearchEnginePayerAccount.publicKey, true));
+    let challenges = await resourceAPI.listChallenges();
+    expect(challenges).toContainEqual(new Challenge(searchEnginePayerAccount.publicKey, secondSearchEnginePayerAccount.publicKey, true));
   });
 
   test('deny challenge', async () => {
-
+    await resourceAPI.denyChallenge(new Challenge(searchEnginePayerAccount.publicKey, secondSearchEnginePayerAccount.publicKey, false));
+    let challenges = await resourceAPI.listChallenges();
+    expect(challenges).toContainEqual(new Challenge(searchEnginePayerAccount.publicKey, secondSearchEnginePayerAccount.publicKey, false));
   });
 
   test('claim challenge', async () => {

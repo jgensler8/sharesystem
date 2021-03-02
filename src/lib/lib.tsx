@@ -12,7 +12,7 @@ import {
   IResourceAPI, ISearchEngine, Resource, ResourceInstance,
   Challenge, SearchEngineAccount, Location, SE_INSTRUCTION_UPDATE_ACCOUNT, SE_INSTRUCTION_REGISTER_RESOURCE,
   ResourceIndex, SE_INSTRUCTION_REGISTER_INTENT, RESOURCE_INSTRUCTION_REGISTER_INTENT, ResourceDatabase,
-  RESOURCE_INSTRUCTION_RECORD_RESOURCE_INSTANCE, RESOURCE_INSTRUCTION_RESET_DATABASE, RESOURCE_INSTRUCTION_INITIATE_DISTRIBUTION,
+  RESOURCE_INSTRUCTION_RECORD_RESOURCE_INSTANCE, RESOURCE_INSTRUCTION_RESET_DATABASE, RESOURCE_INSTRUCTION_INITIATE_DISTRIBUTION, RESOURCE_INSTRUCTION_RECORD_CHALLENGE,
 } from './lib-types';
 import { toBorsh, toTyped, SEARCH_ENGINE_ACCOUNT_SPACE } from './lib-serialization';
 
@@ -134,13 +134,37 @@ export class ResourceAPI implements IResourceAPI {
     return await (await this.getDatabase()).challenges;
   }
 
-  async approveChallenge(challenege: Challenge): Promise<void> {
-    // let mut challenges: []Challenge = some_borsh_call::read_array(&data)
-    // for challenge in challenges:
-    //   if req.to == challenge.to && param.to == challenge.to && req.from == challenge.from
-    //     challenege.approved = true
+  async _record_challenge(challenge: Challenge): Promise<void> {
+    let instruction = new Uint8Array([RESOURCE_INSTRUCTION_RECORD_CHALLENGE]);
+    let instruction_data = toBorsh(challenge);
+    let combined = new Uint8Array(1 + instruction_data.length);
+    combined.set(instruction);
+    combined.set(instruction_data, 1);
+    const transaction = new Transaction().add(
+      new TransactionInstruction({
+        keys: [
+          { pubkey: this.databaseId, isSigner: false, isWritable: true },
+        ],
+        programId: this.resource.address,
+        data: Buffer.from(combined),
+      }),
+    );
+    await sendAndConfirmTransaction(
+      this.connection,
+      transaction,
+      [this.payerAccount],
+      {
+        commitment: 'singleGossip',
+        preflightCommitment: 'singleGossip',
+      },
+    );
   }
-  async denyChallenge(challenege: Challenge): Promise<void> {
+
+  async approveChallenge(challenge: Challenge): Promise<void> {
+    return this._record_challenge(challenge);
+  }
+  async denyChallenge(challenge: Challenge): Promise<void> {
+    return this._record_challenge(challenge);
   }
 
   async claimChallenge() {
