@@ -71,6 +71,13 @@ fn main() {
     let matches = App::new("bootstrap")
     .version("0.0.1")
     .author("Jeff")
+    // databases
+    .arg(
+        Arg::new("database-type")
+            .about("which database to provision")
+            .possible_value("searchengine")
+            .possible_value("resource")
+    )
     .arg(
         Arg::new("url")
             .about("url to connect to")
@@ -104,18 +111,10 @@ fn main() {
             .about("the file to read/save the private key to")
             .default_value("./src/lib/resource_database_keygen.out.json")
     )
-    // commands
-    .subcommand(
-        App::new("bootstrap-search-engine-database")
-            .about("Create a database account for a search engine to use")
-    )
-    .subcommand(
-        App::new("bootstrap-resource-database")
-            .about("Create a database account for a resource to use")
-    )
     .get_matches();
 
     let url = matches.value_of("url").unwrap();
+    let db_type = matches.value_of("database-type").unwrap();
 
     // payer
     let payer_keypair_file = matches.value_of("payer-keypair-file").unwrap();
@@ -126,20 +125,19 @@ fn main() {
     let resource_pubkey_file = matches.value_of("resource-pubkey-file").unwrap();
     let resource_database_keypair_file = matches.value_of("resource-database-keypair-file").unwrap();
 
-    match matches.subcommand_name() {
-        Some("bootstrap-search-engine-database") => bootstrap_database(
+    match db_type {
+        "searchengine" => bootstrap_database(
             url.to_string(),
             payer_keypair_file.to_string(),
             searchengine_pubkey_file.to_string(),
             searchengine_database_keypair_file.to_string(),
             384),
-        Some("bootstrap-resource-database") => bootstrap_database(
+        "resource" => bootstrap_database(
             url.to_string(),
             payer_keypair_file.to_string(),
             resource_pubkey_file.to_string(),
             resource_database_keypair_file.to_string(),
             456),
-        None => println!("No subcommand was used"),
         _ => println!("Some other subcommand was used"),
     }
 }

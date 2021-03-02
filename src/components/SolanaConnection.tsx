@@ -28,7 +28,7 @@ export class SolanaConnection extends React.Component<SolanaConnectionProps, Sol
     }
 
     async asyncLoadAll(): Promise<SolanaConnectionState> {
-        const useMock = false;
+        const useMock = true;
         let system: ISearchEngine;
         if(useMock) {
             system = new MockSearchEngineAPI(new Store());
