@@ -34,7 +34,7 @@ fn _process_instruction(
         ResourceInstruction::Default() => {
             info!("OK")
         }
-        ResourceInstruction::RecordIntent() => {
+        ResourceInstruction::RegisterIntent() => {
             info!("recording intent");
             let mut database_account_data = accounts[0].try_borrow_mut_data().unwrap();
             let mut resource_database = ResourceDatabase::try_from_slice(&database_account_data).unwrap();
@@ -178,7 +178,7 @@ mod test {
     use crate::{
         error::ResourceError,
         types::{
-            INSTRUCTION_RECORD_INTENT,
+            INSTRUCTION_REGISTER_INTENT,
             INSTRUCTION_RECORD_RESOURCE_INSTANCE,
             INSTRUCTION_INITIATE_DISTRIBUTION,
             INSTRUCTION_RECORD_CHALLENGE,
@@ -272,7 +272,7 @@ mod test {
         let accounts = vec![database_account, recipient_account];
 
         let mut instruction_data: Vec<u8> = Vec::new();
-        instruction_data.push(INSTRUCTION_RECORD_INTENT);
+        instruction_data.push(INSTRUCTION_REGISTER_INTENT);
 
         let result = process_instruction(&program_id, &accounts, &instruction_data);
         assert_eq!(result.unwrap(), ());

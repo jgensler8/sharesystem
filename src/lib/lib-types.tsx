@@ -48,10 +48,17 @@ Resources
   auth: searchengine_id == accounts[0].owner and accounts[0].is_signer == true
 */
 
-export const INSTRUCTION_DEFAULT = 0;
-export const INSTRUCTION_UPDATE_ACCOUNT = 1;
-export const INSTRUCTION_REGISTER_RESOURCE = 2;
-export const INSTRUCTION_REGISTER_INTENT = 3;
+export const SE_INSTRUCTION_DEFAULT = 0;
+export const SE_INSTRUCTION_UPDATE_ACCOUNT = 1;
+export const SE_INSTRUCTION_REGISTER_RESOURCE = 2;
+export const SE_INSTRUCTION_REGISTER_INTENT = 3;
+
+export const RESOURCE_INSTRUCTION_DEFAULT = 0;
+export const RESOURCE_INSTRUCTION_REGISTER_INTENT = 1;
+export const RESOURCE_INSTRUCTION_RECORD_RESOURCE_INSTANCE = 2;
+export const RESOURCE_INSTRUCTION_INITIATE_DISTRIBUTION = 3;
+export const RESOURCE_INSTRUCTION_RECORD_CHALLENGE = 4;
+export const RESOURCE_INSTRUCTION_CLAIM_CHALLENGE = 5;
 
 export let EMPTY_PUBLIC_KEY = new PublicKey(new Uint8Array(32));
 

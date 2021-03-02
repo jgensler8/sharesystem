@@ -3,7 +3,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 pub const PUBLIC_KEY_SIZE: usize = 32;
 
 pub const INSTRUCTION_DEFAULT: u8 = 0;
-pub const INSTRUCTION_RECORD_INTENT: u8 = 1;
+pub const INSTRUCTION_REGISTER_INTENT: u8 = 1;
 pub const INSTRUCTION_RECORD_RESOURCE_INSTANCE: u8 = 2;
 pub const INSTRUCTION_INITIATE_DISTRIBUTION: u8 = 3;
 pub const INSTRUCTION_RECORD_CHALLENGE: u8 = 4;

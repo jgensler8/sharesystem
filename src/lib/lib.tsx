@@ -10,8 +10,8 @@ import {
 import { Store, WrongInstanceError, KeyNotFoundError } from './util';
 import {
   IResourceAPI, ISearchEngine, ChallengeTable, Resource, ResourceInstance,
-  Challenge, SearchEngineAccount, Location, INSTRUCTION_UPDATE_ACCOUNT, INSTRUCTION_REGISTER_RESOURCE,
-  ResourceIndex, INSTRUCTION_REGISTER_INTENT,
+  Challenge, SearchEngineAccount, Location, SE_INSTRUCTION_UPDATE_ACCOUNT, SE_INSTRUCTION_REGISTER_RESOURCE,
+  ResourceIndex, SE_INSTRUCTION_REGISTER_INTENT, RESOURCE_INSTRUCTION_REGISTER_INTENT
 } from './lib-types';
 import { toBorsh, toTyped, SEARCH_ENGINE_ACCOUNT_SPACE } from './lib-serialization';
 
@@ -19,11 +19,13 @@ import { toBorsh, toTyped, SEARCH_ENGINE_ACCOUNT_SPACE } from './lib-serializati
 export class ResourceAPI implements IResourceAPI {
   connection: Connection;
   resource: Resource;
+  databaseId: PublicKey;
   payerAccount: Account;
 
-  constructor(connection: Connection, resource: Resource, payerAccount: Account) {
+  constructor(connection: Connection, resource: Resource, databaseId: PublicKey, payerAccount: Account) {
     this.connection = connection;
     this.resource = resource;
+    this.databaseId = databaseId;
     this.payerAccount = payerAccount;
   }
 
@@ -34,6 +36,29 @@ export class ResourceAPI implements IResourceAPI {
         programId: this.resource.address,
         data: Buffer.alloc(1),
       })
+    );
+    await sendAndConfirmTransaction(
+      this.connection,
+      transaction,
+      [this.payerAccount],
+      {
+        commitment: 'singleGossip',
+        preflightCommitment: 'singleGossip',
+      },
+    );
+  }
+
+  async registerIntent(account: Account): Promise<void> {
+    let instruction = new Uint8Array([RESOURCE_INSTRUCTION_REGISTER_INTENT]);
+    const transaction = new Transaction().add(
+      new TransactionInstruction({
+        keys: [
+          { pubkey: this.databaseId, isSigner: false, isWritable: true },
+          { pubkey: account.publicKey, isSigner: false, isWritable: false },
+        ],
+        programId: this.resource.address,
+        data: Buffer.from(instruction),
+      }),
     );
     await sendAndConfirmTransaction(
       this.connection,
@@ -192,7 +217,7 @@ export class SearchEngineAPI implements ISearchEngine {
     // update internal store
     this.store.put(this.ACCOUNT_KEY, searchEngineAccount);
     // update blockchain with transaction
-    let instruction = new Uint8Array([INSTRUCTION_UPDATE_ACCOUNT]);
+    let instruction = new Uint8Array([SE_INSTRUCTION_UPDATE_ACCOUNT]);
     let instruction_data = toBorsh(searchEngineAccount);
     let combined = new Uint8Array(1 + instruction_data.length);
     combined.set(instruction);
@@ -236,7 +261,7 @@ export class SearchEngineAPI implements ISearchEngine {
   }
 
   async registerResource(resource: Resource): Promise<void> {
-    let instruction = new Uint8Array([INSTRUCTION_REGISTER_RESOURCE]);
+    let instruction = new Uint8Array([SE_INSTRUCTION_REGISTER_RESOURCE]);
     let instruction_data = toBorsh(resource);
     let combined = new Uint8Array(1 + instruction_data.length);
     combined.set(instruction);
@@ -289,7 +314,7 @@ export class SearchEngineAPI implements ISearchEngine {
   }
 
   async registerIntent(account: Account, resource: PublicKey): Promise<void> {
-    let instruction = new Uint8Array([INSTRUCTION_REGISTER_INTENT]);
+    let instruction = new Uint8Array([SE_INSTRUCTION_REGISTER_INTENT]);
     const transaction = new Transaction().add(
       new TransactionInstruction({
         keys: [

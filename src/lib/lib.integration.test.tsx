@@ -4,7 +4,7 @@ import { ResourceAPI, SearchEngineAPI } from './lib';
 import {
   establishConnection, loadSearchEngineAddressFromEnvironment, loadAccountFromEnvironment,
   loadDatabaseAddressFromEnvironment, Store, KeyNotFoundError,
-  loadResourceAddressFromEnvironment,
+  loadResourceAddressFromEnvironment, loadResourceDatabaseAddressFromEnvironment
 } from './util'
 
 describe('serach engine', () => {
@@ -15,8 +15,9 @@ describe('serach engine', () => {
   let payerAccount: Account;
   let searchEnginePayerAccount: Account;
   let resourceProgramAccount: PublicKey;
+  let resourceProgramDatabaseAccount: Account;
   let system: SearchEngineAPI;
-  let resourceAPI: ResourceAPI; 
+  let resourceAPI: ResourceAPI;
   let location: Location;
   let resource: Resource;
 
@@ -28,16 +29,17 @@ describe('serach engine', () => {
     payerAccount = await loadAccountFromEnvironment();
     searchEnginePayerAccount = new Account();
     resourceProgramAccount = await loadResourceAddressFromEnvironment();
+    resourceProgramDatabaseAccount = await loadResourceDatabaseAddressFromEnvironment();
     location = new Location("94040");
     resource = new Resource("potato", location, resourceProgramAccount, 10);
-    resourceAPI = new ResourceAPI(conn, resource, payerAccount);
-
+    
+    resourceAPI = new ResourceAPI(conn, resource, resourceProgramDatabaseAccount.publicKey, payerAccount);
     system = new SearchEngineAPI(conn, address, database.publicKey, store, payerAccount);
 
     console.log(`payer account: ${payerAccount.publicKey.toBase58()}`)
     console.log(`searchengine account: ${searchEnginePayerAccount.publicKey.toBase58()}`)
     console.log(`search engine: ${address}`)
-  })
+  });
 
   // *************************************************************************
   // Search Engine Contract
@@ -45,7 +47,7 @@ describe('serach engine', () => {
 
   test('healthcheck search engine', async () => {
     await system.healthCheck();
-  })
+  });
 
   test('can create and read search engine account', async () => {
     await expect(system.getDefaultSearchEngineAccount()).rejects.toEqual(new KeyNotFoundError());
@@ -67,7 +69,7 @@ describe('serach engine', () => {
 
     let storedAccount = await system.getAccountDetails(searchEnginePayerAccount.publicKey);
     expect(defaultAccount).toStrictEqual(storedAccount);
-  })
+  });
 
   test('can register resource', async () => {
     await system.registerResource(resource).catch(err => {});
@@ -75,7 +77,7 @@ describe('serach engine', () => {
     let index = await system.getResourceIndex();
     expect(index.resources.has(location.zip)).toEqual(true);
     expect(index.resources.get(location.zip)).toContainEqual(resourceProgramAccount);
-  })
+  });
   
   test('can register intent', async () => {
     await system.registerIntent(searchEnginePayerAccount, resourceProgramAccount);
@@ -90,5 +92,9 @@ describe('serach engine', () => {
 
   test('healthcheck resource', async () => {
     await resourceAPI.healthCheck();
+  });
+
+  test('can register intent', async () => {
+    await resourceAPI.registerIntent(searchEnginePayerAccount);
   });
 })

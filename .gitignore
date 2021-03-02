@@ -35,6 +35,8 @@ program-rust/target/
 src/lib/deploy.out.json
 src/lib/keygen.out.json
 src/lib/resource_deploy.out.json
+src/lib/resource_database_keygen.out.json
+src/lib/resource_deploy_raw.out.json
 src/lib/searchengine_deploy.out.json
 src/lib/searchengine_deploy_raw.out.json
 src/lib/searchengine_database_keygen.out.json

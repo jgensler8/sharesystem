@@ -15,6 +15,7 @@ import fs from 'mz/fs';
 import searchengine from './searchengine_deploy.out.json'
 import resource from './resource_deploy.out.json'
 import database from './searchengine_database_keygen.out.json'
+import resource_database from './resource_database_keygen.out.json'
 import privateKey from './keygen.out.json'
 
 /**
@@ -45,6 +46,13 @@ export async function loadDatabaseAddressFromEnvironment(): Promise<Account> {
   // TODO(jeffg): support production environment
   if(database.length) {
     return new Account(Uint8Array.from(database));
+  }
+  return new Account();
+}
+export async function loadResourceDatabaseAddressFromEnvironment(): Promise<Account> {
+  // TODO(jeffg): support production environment
+  if(resource_database.length) {
+    return new Account(Uint8Array.from(resource_database));
   }
   return new Account();
 }

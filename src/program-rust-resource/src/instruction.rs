@@ -1,6 +1,6 @@
 use crate::types::{
     INSTRUCTION_DEFAULT,
-    INSTRUCTION_RECORD_INTENT,
+    INSTRUCTION_REGISTER_INTENT,
     INSTRUCTION_RECORD_RESOURCE_INSTANCE,
     INSTRUCTION_INITIATE_DISTRIBUTION,
     INSTRUCTION_RECORD_CHALLENGE,
@@ -17,7 +17,7 @@ use std::mem::size_of;
 #[derive(Debug, PartialEq)]
 pub enum ResourceInstruction {
     Default(),
-    RecordIntent(),
+    RegisterIntent(),
     RecordResourceInstance(ResourceInstance),
     InitiateDistribution(),
     RecordChallenge(Challenge),
@@ -31,8 +31,8 @@ impl ResourceInstruction {
             INSTRUCTION_DEFAULT => {
                 Self::Default()
             }
-            INSTRUCTION_RECORD_INTENT => {
-                Self::RecordIntent()
+            INSTRUCTION_REGISTER_INTENT => {
+                Self::RegisterIntent()
             }
             INSTRUCTION_RECORD_RESOURCE_INSTANCE => {
                 match ResourceInstance::try_from_slice(_rest) {
@@ -93,10 +93,10 @@ mod test {
     #[test]
     fn test_record_intent() {
         let mut data = Vec::<u8>::new();
-        data.push(INSTRUCTION_RECORD_INTENT);
+        data.push(INSTRUCTION_REGISTER_INTENT);
 
         let result = ResourceInstruction::unpack(&data).unwrap();
-        let expected = ResourceInstruction::RecordIntent();
+        let expected = ResourceInstruction::RegisterIntent();
         assert_eq!(expected, result);
     }
 
