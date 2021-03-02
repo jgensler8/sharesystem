@@ -11,7 +11,7 @@ import { Store, WrongInstanceError, KeyNotFoundError } from './util';
 import {
   IResourceAPI, ISearchEngine, ChallengeTable, Resource, ResourceInstance,
   Challenge, SearchEngineAccount, Location, SE_INSTRUCTION_UPDATE_ACCOUNT, SE_INSTRUCTION_REGISTER_RESOURCE,
-  ResourceIndex, SE_INSTRUCTION_REGISTER_INTENT, RESOURCE_INSTRUCTION_REGISTER_INTENT, ResourceDatabase
+  ResourceIndex, SE_INSTRUCTION_REGISTER_INTENT, RESOURCE_INSTRUCTION_REGISTER_INTENT, ResourceDatabase, RESOURCE_INSTRUCTION_RECORD_RESOURCE_INSTANCE
 } from './lib-types';
 import { toBorsh, toTyped, SEARCH_ENGINE_ACCOUNT_SPACE } from './lib-serialization';
 
@@ -82,13 +82,29 @@ export class ResourceAPI implements IResourceAPI {
   }
 
   async recordResourceInstance(instance: ResourceInstance): Promise<void> {
-    // let mut is_being_distributed: boolean = some_borsh_call::read_bool(&data)
-    // if is_being_distributed
-    //   return
-
-    // let mut resource_record_instances: []ResourceRecordInstance = some_borsh_call::read_array(&data)
-    // resource_record_instances.append(instance)
-    // could maybe do a mint/burn for incentive structue to record resource
+    let instruction = new Uint8Array([RESOURCE_INSTRUCTION_RECORD_RESOURCE_INSTANCE]);
+    let instruction_data = toBorsh(instance);
+    let combined = new Uint8Array(1 + instruction_data.length);
+    combined.set(instruction);
+    combined.set(instruction_data, 1);
+    const transaction = new Transaction().add(
+      new TransactionInstruction({
+        keys: [
+          { pubkey: this.databaseId, isSigner: false, isWritable: true },
+        ],
+        programId: this.resource.address,
+        data: Buffer.from(combined),
+      }),
+    );
+    await sendAndConfirmTransaction(
+      this.connection,
+      transaction,
+      [this.payerAccount],
+      {
+        commitment: 'singleGossip',
+        preflightCommitment: 'singleGossip',
+      },
+    );
   }
 
   async initiateDistribution(): Promise<void> {

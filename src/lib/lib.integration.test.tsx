@@ -1,5 +1,5 @@
 import { Connection, PublicKey, Account } from '@solana/web3.js';
-import { Location, MAX_TRUST_TABLE_SIZE, Resource, TrustTableEntry } from './lib-types';
+import { Location, MAX_TRUST_TABLE_SIZE, Resource, ResourceInstance, TrustTableEntry } from './lib-types';
 import { ResourceAPI, SearchEngineAPI } from './lib';
 import {
   establishConnection, loadSearchEngineAddressFromEnvironment, loadAccountFromEnvironment,
@@ -111,5 +111,14 @@ describe('serach engine', () => {
     let database = await resourceAPI.getDatabase();
     expect(database.intents).toHaveLength(1);
     expect(database.intents[0]).toEqual(searchEnginePayerAccount.publicKey);
+  });
+
+  test('record resource instance', async() => {
+    let resourceInstance = new ResourceInstance(searchEnginePayerAccount.publicKey, 10);
+    await resourceAPI.recordResourceInstance(resourceInstance);
+
+    let database = await resourceAPI.getDatabase();
+    expect(database.instances).toHaveLength(1);
+    expect(database.instances[0]).toEqual(resourceInstance);
   });
 })
