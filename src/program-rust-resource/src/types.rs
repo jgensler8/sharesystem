@@ -67,7 +67,7 @@ pub struct ResourceInstance {
     pub quantity: u8,
 }
 
-pub const MAX_NUM_RECIPIENTS: usize = 4;
+pub const MAX_NUM_RECIPIENTS: usize = 2;
 pub const MAX_NUM_RESOURCE_INSTANCES: usize = MAX_NUM_RECIPIENTS;
 pub const MAX_NUM_CHALLENGES: usize = MAX_NUM_RECIPIENTS * MAX_NUM_RECIPIENTS;
 
@@ -80,4 +80,4 @@ pub struct ResourceDatabase {
     pub challenges: [Challenge; MAX_NUM_CHALLENGES],
     pub claims: [[u8; PUBLIC_KEY_SIZE]; MAX_NUM_RECIPIENTS]
 }
-pub const RESOURCE_DATABASE_SIZE: usize = 1430;
+pub const RESOURCE_DATABASE_SIZE: usize = 456;

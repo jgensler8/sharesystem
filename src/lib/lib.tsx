@@ -17,10 +17,33 @@ import { toBorsh, toTyped, SEARCH_ENGINE_ACCOUNT_SPACE } from './lib-serializati
 
 
 export class ResourceAPI implements IResourceAPI {
+  connection: Connection;
   resource: Resource;
+  payerAccount: Account;
 
-  constructor(resource: Resource) {
+  constructor(connection: Connection, resource: Resource, payerAccount: Account) {
+    this.connection = connection;
     this.resource = resource;
+    this.payerAccount = payerAccount;
+  }
+
+  async healthCheck(): Promise<void> {
+    const transaction = new Transaction().add(
+      new TransactionInstruction({
+        keys: [],
+        programId: this.resource.address,
+        data: Buffer.alloc(1),
+      })
+    );
+    await sendAndConfirmTransaction(
+      this.connection,
+      transaction,
+      [this.payerAccount],
+      {
+        commitment: 'singleGossip',
+        preflightCommitment: 'singleGossip',
+      },
+    );
   }
 
   async recordResourceInstance(instance: ResourceInstance): Promise<void> {

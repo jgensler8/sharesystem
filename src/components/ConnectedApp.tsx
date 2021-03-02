@@ -184,10 +184,16 @@ export class ConnectedApp extends React.Component<ConnectedAppProps, ConnectedAp
     async asyncLoadAll(): Promise<ConnectedAppState> {
         console.log("loading indexes");
 
-        let resources = await this.state.system.listResources(new Location("94040"));
+        let resources = await this.state.system.listResources(new Location(""));
         console.log(resources);
         let intents = await this.state.system.listIntents(this.state.searchEnginePayerAccount);
         console.log(intents);
+        // for each intent
+        //   resource = resource_api.get(intent)
+        //   challenges.concat(resource.challenges)
+        // 
+        //   if (calculate_trust(resource))
+        //     claims.concat(resource)
 
         return {
             ...this.state,

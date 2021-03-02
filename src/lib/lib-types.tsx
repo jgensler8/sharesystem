@@ -139,6 +139,9 @@ export class ResourceIndex {
 }
 
 export interface IResourceAPI {
+  
+  healthCheck(): Promise<void>;
+
   /*
   Upload of a robot/human that X amount of resource exists, shold prove to other accounts that the resource is available
   */
